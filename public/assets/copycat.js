@@ -1,9 +1,9 @@
-import { initPage, api, html, raw, esc, fmtDuration, timeAgo, short, sourceBadge, isAddress, explorerLink, ponsLink } from './common.js';
+import { initPage, api, html, raw, esc, fmtDuration, timeAgo, short, sourceBadge, isAddress, explorerLink, ponsLink, tokenImg } from './common.js';
 
 const cfg = await initPage('copycat');
 const $ = (id) => document.getElementById(id);
 
-const thumb = (size, dead) => `<span class="thumb${dead ? ' dead' : ''}" style="width: ${size}px; height: ${size}px; border-radius: ${Math.round(size / 3.5)}px" aria-hidden="true"><i style="width: ${Math.round(size * 0.42)}px; height: ${Math.round(size * 0.42)}px"></i></span>`;
+const thumb = (size, dead, t) => `<span class="thumb${dead ? ' dead' : ''}" style="width: ${size}px; height: ${size}px; border-radius: ${Math.round(size / 3.5)}px" aria-hidden="true"><i style="width: ${Math.round(size * 0.42)}px; height: ${Math.round(size * 0.42)}px"></i>${tokenImg(t)}</span>`;
 const fate = (alive, life) => (alive == null ? '<span class="fate muted">status unknown</span>' : `<span class="fate ${alive ? 'alive' : 'dead'}">${alive ? 'Alive' : 'Dead'}${life ? ' · ' + esc(life) : ''}</span>`);
 
 function gauge(value, label) {
@@ -32,7 +32,7 @@ function render(d) {
     const w = Math.max(2, Math.min(100, m.score));
     const color = m.score >= cfg.COPYCAT_NAME_THRESHOLD * 100 ? 'var(--danger)' : 'var(--accent)';
     return html`<div class="match">
-      ${raw(thumb(52, m.alive === false))}
+      ${raw(thumb(52, m.alive === false, m))}
       <div style="display: flex; flex-direction: column; gap: 10px; min-width: 0">
         <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline"><span style="font-weight: 600">${m.name}</span><span class="small muted">$${m.symbol} · ${m.note}</span>${raw(ponsLink(cfg, m.address))}</div>
         <div class="bar thin"><div class="fill" style="width: ${raw(w)}%; background: ${raw(color)}"></div><span class="knob" style="left: ${raw(w)}%"></span></div>
@@ -51,11 +51,12 @@ function render(d) {
       <section class="panel" aria-label="Scanned token" style="flex: 1 1 360px">
         <div class="panel-head"><span class="eyebrow">${d.mode === 'scan' ? 'Scanned token' : 'Just launched'}</span><span style="display: flex; gap: 8px; align-items: center"><span class="small muted">${t.launchpad}${t.launchedAt ? ' · ' + timeAgo(t.launchedAt) : ''}</span><span class="src" data-src hidden></span></span></div>
         <div style="display: flex; gap: 20px; align-items: center">
-          <span class="thumb" style="width: 96px; height: 96px; border-radius: 26px" aria-hidden="true"><svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="36" r="20" style="fill: var(--accent)"/><path d="M17 26 L21 12 L28 23 Z M47 26 L43 12 L36 23 Z" style="fill: var(--accent)"/><circle cx="25" cy="34" r="3" fill="#fff"/><circle cx="39" cy="34" r="3" fill="#fff"/><path d="M26 44 Q32 49 38 44" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/></svg></span>
+          <span class="thumb" style="width: 96px; height: 96px; border-radius: 26px" aria-hidden="true"><svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="36" r="20" style="fill: var(--accent)"/><path d="M17 26 L21 12 L28 23 Z M47 26 L43 12 L36 23 Z" style="fill: var(--accent)"/><circle cx="25" cy="34" r="3" fill="#fff"/><circle cx="39" cy="34" r="3" fill="#fff"/><path d="M26 44 Q32 49 38 44" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/></svg>${raw(tokenImg(t))}</span>
           <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
             <span style="font-weight: 700; font-size: 26px; letter-spacing: -0.02em; overflow-wrap: anywhere">${t.name || 'Unnamed token'}</span>
             <span class="small muted">$${t.symbol || '?'} · ${raw(explorerLink(cfg, t.address))}</span>
             ${raw(ponsLink(cfg, t.address, 'Open on Pons', 'pons-btn'))}
+            ${raw(t.links && (t.links.x || t.links.telegram || t.links.website) ? `<span class="tok-links">${[['X', t.links.x], ['Telegram', t.links.telegram], ['Website', t.links.website]].filter(([, u]) => u && /^https?:\/\//i.test(u)).map(([k, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener nofollow">${k}</a>`).join('')}</span>` : '')}
           </div>
         </div>
         <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: center">
@@ -85,7 +86,7 @@ function render(d) {
         ${raw(stat('Images reused', dep.imagesReused == null ? '—' : dep.imagesReused + '×'))}
         ${raw(stat('Median lifespan', fmtDuration(dep.medianLifespanMin)))}
       </div>
-      ${raw(dep.history && dep.history.length ? `<div class="history">${dep.history.map((h) => html`<div>${raw(thumb(40, h.alive === false))}<div style="display: flex; flex-direction: column; min-width: 0"><span style="font-size: 12px; font-weight: 600">$${h.symbol}</span>${raw(h.alive == null ? `<span class="fate muted">${esc(h.at ? timeAgo(h.at) : '')}</span>` : fate(h.alive, h.life))}</div></div>`).join('')}</div>` : '<div class="empty">No other launches from this deployer.</div>')}
+      ${raw(dep.history && dep.history.length ? `<div class="history">${dep.history.map((h) => html`<div>${raw(thumb(40, h.alive === false, h))}<div style="display: flex; flex-direction: column; min-width: 0"><span style="font-size: 12px; font-weight: 600">$${h.symbol}</span>${raw(h.alive == null ? `<span class="fate muted">${esc(h.at ? timeAgo(h.at) : '')}</span>` : fate(h.alive, h.life))}</div></div>`).join('')}</div>` : '<div class="empty">No other launches from this deployer.</div>')}
     </section>` : '')}`;
   $('result').querySelectorAll('[data-src]').forEach((el) => sourceBadge(el, d));
 }

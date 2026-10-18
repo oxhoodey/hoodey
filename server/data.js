@@ -49,3 +49,6 @@ export const wallet = (address) => liveOr(`wallet:${address.toLowerCase()}`, () 
 export const chainStatus = () => (useLive() ? live.chainStatus() : Promise.resolve({}));
 
 export const trending = () => liveOr('trending', () => live.trending(), () => sample.trending());
+
+// Image URL named in a token's launch transaction (chain source only).
+export const imageUrlOf = (token) => (useLive() && live.imageUrlOf ? live.imageUrlOf(token) : null);

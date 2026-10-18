@@ -54,7 +54,11 @@ export const VARIABLES = [
   // ── Copycat Eye ──────────────────────────────────────────────────────
   { group: 'Copycat Eye', name: 'COPYCAT_NAME_THRESHOLD', type: 'float', default: 0.7, public: true, desc: 'Name similarity (0–1) above which a token is flagged as a copy.' },
   { group: 'Copycat Eye', name: 'COPYCAT_IMAGE_THRESHOLD', type: 'float', default: 0.8, public: true, desc: 'Image similarity (0–1) above which a token is flagged as a copy (used once image matching is enabled).' },
-  { group: 'Copycat Eye', name: 'IPFS_GATEWAY', type: 'string', default: 'https://ipfs.io/ipfs/', public: true, desc: 'Gateway used to show token logos stored on IPFS.' },
+  { group: 'Token images', name: 'IPFS_GATEWAY', type: 'string', default: 'https://ipfs.filebase.io/ipfs/', desc: 'IPFS gateway for token logos (ipfs://… images). The public Filebase gateway works without an account; a Filebase dedicated gateway (https://<name>.myfilebase.com/ipfs/) is faster and can resize.' },
+  { group: 'Token images', name: 'IPFS_IMAGE_PARAMS', type: 'string', default: '', desc: 'Extra query added to IPFS image URLs. Only for a Filebase dedicated gateway, e.g. img-width=128&img-height=128&img-fit=cover&img-format=webp. Leave empty on the public gateway (it refuses resizing).' },
+  { group: 'Token images', name: 'IMAGE_CACHE_MB', type: 'int', default: 64, desc: 'Memory the server may use to keep token logos.' },
+  { group: 'Token images', name: 'IMAGE_MAX_KB', type: 'int', default: 3072, desc: 'Largest logo file the server will fetch.' },
+  { group: 'Token images', name: 'IMAGE_TIMEOUT_MS', type: 'int', default: 8000, desc: 'Timeout for fetching one logo.' },
 
   // ── Market Clock ─────────────────────────────────────────────────────
   { group: 'Market Clock', name: 'MARKET_TIMEZONE', type: 'string', default: 'America/New_York', public: true, desc: 'Time zone of the exchange.' },

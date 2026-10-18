@@ -64,6 +64,45 @@ function decodeString(h) {
   } catch { return ''; }
 }
 
+// The launch transaction carries the token's profile as ABI strings: name, symbol, image, description, links.
+function stringsAt(d) {
+  const words = Math.floor(d.length / 64);
+  const strings = [];
+  for (let i = 0; i < words; i++) {
+    const len = parseInt(d.slice(i * 64, i * 64 + 64), 16);
+    if (!(len > 0 && len < 4096) || d.slice(i * 64, i * 64 + 48) !== '0'.repeat(48)) continue;
+    const span = Math.ceil(len / 32);
+    if (i + 1 + span > words) continue;
+    const body = d.slice((i + 1) * 64, (i + 1) * 64 + len * 2);
+    const pad = d.slice((i + 1) * 64 + len * 2, (i + 1 + span) * 64);
+    if (/[^0]/.test(pad)) continue;
+    const text = Buffer.from(body, 'hex').toString('utf8');
+    if (!text || /[\u0000-\u001f\ufffd]/.test(text.replace(/[\n\r\t]/g, ''))) continue;
+    strings.push(text.trim());
+    i += span;
+  }
+  return strings;
+}
+
+export function profileFromInput(input) {
+  // Launches made through a smart wallet nest the call inside another one, shifted by 4-byte steps,
+  // so try each alignment and keep the one that yields the most strings.
+  let strings = [];
+  for (let shift = 0; shift < 64; shift += 8) {
+    const found = stringsAt((input || '').slice(10 + shift));
+    if (found.length > strings.length) strings = found;
+  }
+  const social = /^(https?:\/\/)?(www\.)?(x\.com|twitter\.com|t\.me|telegram\.me|discord\.(gg|com))\//i;
+  const isUrl = (x) => /^(ipfs:\/\/|https?:\/\/)\S+$/i.test(x) || /^(Qm[1-9A-HJ-NP-Za-km-z]{44}|bafy[a-z2-7]{50,})$/.test(x);
+  const image = strings.find((x) => isUrl(x) && !social.test(x)) || null;
+  const links = {
+    x: strings.find((x) => /^(https?:\/\/)?(www\.)?(x|twitter)\.com\//i.test(x)) || null,
+    telegram: strings.find((x) => /^(https?:\/\/)?(t|telegram)\.me\//i.test(x)) || null,
+    website: strings.find((x) => /^https?:\/\//i.test(x) && x !== image && !social.test(x)) || null
+  };
+  return { image, links };
+}
+
 const metaCache = new Map();
 async function meta(token) {
   if (metaCache.has(token)) return metaCache.get(token);
@@ -111,9 +150,13 @@ async function indexRange(from, to) {
     if (l.topics[0] !== T_LAUNCH || l.address.toLowerCase() !== factory) continue;
     const token = addr(l.topics[1]), curve = addr(l.topics[2]), creator = addr(l.topics[3]);
     const bn = parseInt(l.blockNumber, 16);
-    const m = await meta(token).catch(() => ({ name: '', symbol: '' }));
+    const [m, tx] = await Promise.all([
+      meta(token).catch(() => ({ name: '', symbol: '' })),
+      rpc('eth_getTransactionByHash', [l.transactionHash]).catch(() => null)
+    ]);
+    const prof = tx ? profileFromInput(tx.input) : { image: null, links: {} };
     state.curves.set(curve, token);
-    state.launches.set(token, { address: token, curve, creator, name: m.name || m.symbol, symbol: m.symbol, at: new Date(timeOf(bn)).toISOString(), t: timeOf(bn), block: bn, launchpad: 'Pons', ticker: tagStock(m.name, m.symbol) });
+    state.launches.set(token, { address: token, curve, creator, name: m.name || m.symbol, symbol: m.symbol, at: new Date(timeOf(bn)).toISOString(), t: timeOf(bn), block: bn, launchpad: 'Pons', ticker: tagStock(m.name, m.symbol), image: prof.image, links: prof.links });
   }
 
   // A sell names its sender twice. Direct sells: that is the trader. Router sells: the trader is
@@ -219,4 +262,5 @@ export function status() {
 }
 
 export const isReady = () => state.ready;
+export const launchOf = (token) => state.launches.get(String(token).toLowerCase()) || null;
 export { isAddress };

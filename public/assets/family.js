@@ -1,4 +1,4 @@
-import { initPage, api, html, raw, sourceBadge, timeAgo, every } from './common.js';
+import { initPage, api, html, raw, sourceBadge, timeAgo, every, tokenImg } from './common.js';
 
 const cfg = await initPage('family');
 const $ = (id) => document.getElementById(id);
@@ -50,7 +50,7 @@ function render() {
     const dot = stock ? 'background: var(--accent)' : dead ? 'background: var(--faint)' : n.kind === 'original' ? 'background: var(--accent)' : 'border: 2px solid var(--accent); box-sizing: border-box';
     const sub = stock ? n.note : `$${n.symbol}${noteText(n) ? ' · ' + noteText(n) : ''}${n.similarity ? ' · ' + n.similarity + '%' : ''}`;
     return html`<button type="button" class="node${raw(stock ? ' stock' : '')}${raw(dead ? ' dead' : '')}" data-id="${n.id}" ${raw(stock ? 'disabled' : `aria-pressed="${n.id === state.selected}"`)} aria-label="${n.name}, ${stock ? 'stock' : n.kind}${n.alive == null ? '' : n.alive ? ', alive' : ', dead'}" style="left: ${raw(n.gen * GX)}px; top: ${raw(Math.round(n.y))}px">
-      <span class="d" style="${raw(dot)}"></span><span><span class="n">${n.name}</span><span class="s">${sub}</span></span>
+      <span class="d" style="${raw(dot)}"></span>${raw(stock ? '' : tokenImg(n, 'nimg'))}<span><span class="n">${n.name}</span><span class="s">${sub}</span></span>
     </button>`;
   }).join('');
   $('tree').style.width = `${L.width}px`;

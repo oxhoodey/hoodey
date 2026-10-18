@@ -47,6 +47,7 @@ export async function chainStatus() {
 }
 
 export const launches = async () => ix.launches();
+export const imageUrlOf = (token) => (ix.launchOf(token) || {}).image || null;
 
 function creatorCountsOf(all) {
   const c = {};
@@ -76,7 +77,7 @@ function tokenRow(l, all, creatorCounts, refT, vol) {
   const copy = similarOlder(l, all);
   const repeat = creatorCounts[l.creator] || 0;
   return {
-    name: l.name, symbol: l.symbol, address: l.address, launchpad: l.launchpad, at: l.at, ticker: l.ticker || null,
+    name: l.name, symbol: l.symbol, address: l.address, launchpad: l.launchpad, at: l.at, ticker: l.ticker || null, hasImage: !!l.image,
     afterMin: refT == null ? null : Math.round((l.t - refT) / 60000),
     holders: null, volumeUsd: vol && vol.has(l.address) ? Math.round(vol.get(l.address)) : null, top10Pct: null, lifespanMin: null,
     copycat: copy ? { of: copy.of, score: Math.round(copy.score * 100) } : null,
@@ -206,7 +207,7 @@ export async function trending() {
     if (topShare != null && traders >= 2 && topShare >= 0.5) flags.push({ k: 'whale', label: `1 wallet ${Math.round(topShare * 100)}%` });
     if (traders <= 2 && tr.length >= 8) flags.push({ k: 'wash', label: 'Few traders, many trades' });
     rows.push({
-      address, name: l.name, symbol: l.symbol, launchedAt: l.at, ticker: l.ticker || null,
+      address, name: l.name, symbol: l.symbol, launchedAt: l.at, ticker: l.ticker || null, hasImage: !!l.image,
       volumeUsd: Math.round(volUsd), trades: tr.length, traders,
       buyPct: totalEth > 0 ? Math.round((buyEth / totalEth) * 100) : null,
       buys: buys.length, sells: sells.length,
@@ -248,19 +249,20 @@ export async function copycat(address) {
     note: token.at ? undefined : `This token launched before the ${config.INDEX_KEEP_HOURS}h window HoodEye keeps, so it is compared with recent launches only.`,
     token: {
       name: token.name, symbol: token.symbol, address: token.address, launchpad: token.launchpad, launchedAt: token.at,
+      hasImage: !!token.image, links: token.links || null,
       imageSimilarity: null,
       nameSimilarity: top ? +top.score.toFixed(2) : 0,
       closest: top ? { symbol: top.o.symbol, name: top.o.name, launchedAgo: null, diedAfter: null, sameDeployer: !!token.creator && top.o.creator === token.creator } : null,
       flagged: !!top && top.score >= config.COPYCAT_NAME_THRESHOLD
     },
-    matches: scored.map(({ o, score }) => ({ name: o.name, symbol: o.symbol, address: o.address, score: Math.round(score * 100), note: o.creator === token.creator ? 'same deployer' : 'different deployer', alive: null, life: null })),
+    matches: scored.map(({ o, score }) => ({ name: o.name, symbol: o.symbol, address: o.address, hasImage: !!o.image, score: Math.round(score * 100), note: o.creator === token.creator ? 'same deployer' : 'different deployer', alive: null, life: null })),
     scanned: all.length,
     deployer: token.creator ? {
       address: token.creator,
       tokens30d: byCreator.length,
       deadWithin6h: null, imagesReused: null, medianLifespanMin: null,
       pattern: byCreator.length >= 5 ? 'farm' : byCreator.length >= 2 ? 'repeat' : 'new',
-      history: byCreator.filter((l) => l.address !== token.address).slice(0, 8).map((l) => ({ symbol: l.symbol, alive: null, life: null, at: l.at }))
+      history: byCreator.filter((l) => l.address !== token.address).slice(0, 8).map((l) => ({ symbol: l.symbol, address: l.address, hasImage: !!l.image, alive: null, life: null, at: l.at }))
     } : null
   };
 }
@@ -320,7 +322,7 @@ export async function family(ticker) {
     }
     const id = 'n' + i;
     nodes.push({
-      id, parent: best ? best.p.id : 'r', name: l.name, symbol: l.symbol, kind: best ? 'clone' : 'original', alive: null,
+      id, parent: best ? best.p.id : 'r', name: l.name, symbol: l.symbol, address: l.address, hasImage: !!l.image, kind: best ? 'clone' : 'original', alive: null,
       note: l.at, deployer: l.creator ? `${l.creator.slice(0, 6)}…${l.creator.slice(-4)}` : '',
       similarity: best ? Math.round(best.s * 100) : null, at: l.at
     });

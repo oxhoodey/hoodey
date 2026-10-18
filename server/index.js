@@ -6,6 +6,7 @@ import { config, publicConfig } from './config.js';
 import { log, isAddress } from './util.js';
 import * as data from './data.js';
 import { startAlerts } from './alerts.js';
+import { tokenImage } from './images.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PUBLIC = path.join(ROOT, 'public');
@@ -170,6 +171,12 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { ok: true, mode: config.DATA_MODE, source: config.DATA_SOURCE, liveReady: config.liveReady, uptimeSec: Math.round((Date.now() - startedAt) / 1000), chain: await data.chainStatus().catch(() => ({})) });
     }
     if (p.startsWith('/api/')) return await api(req, res, url);
+    if (p.startsWith('/img/')) {
+      const token = p.slice(5);
+      const img = isAddress(token) ? await tokenImage(token, data.imageUrlOf(token)) : null;
+      if (!img) return send(res, 404, '', { 'Cache-Control': 'public, max-age=300' });
+      return send(res, 200, img.body, { 'Content-Type': img.type, 'Cache-Control': 'public, max-age=604800, immutable', 'Content-Security-Policy': "default-src 'none'; sandbox" });
+    }
     if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method not allowed');
 
     const page = PAGES[p];

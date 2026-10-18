@@ -1,4 +1,4 @@
-import { initPage, api, html, raw, esc, fmtInt, fmtUsd, fmtPct, fmtDuration, timeAgo, sourceBadge, every, isAddress, explorerLink, ponsLink } from './common.js';
+import { initPage, api, html, raw, esc, fmtInt, fmtUsd, fmtPct, fmtDuration, timeAgo, sourceBadge, every, isAddress, explorerLink, ponsLink, avatar } from './common.js';
 
 const cfg = await initPage('radar');
 const state = { range: [1, 6, 24].includes(cfg.SPIKE_LOOKBACK_HOURS) ? cfg.SPIKE_LOOKBACK_HOURS : 6, ticker: null, data: null };
@@ -58,7 +58,7 @@ function renderDetail(d) {
       <span class="dot"></span><span class="chip ${raw(i === 0 ? 'chip-accent' : 'chip-raised')}">${t.afterMin == null ? timeAgo(t.at) : '+' + t.afterMin + 'm'} · ${t.symbol}</span></div>`).join('') : '';
 
   const rows = toks.map((t) => html`<div class="trow" role="row">
-      <span role="cell" class="tok"><span class="av">${(t.symbol || '?').slice(0, 2)}</span><span><span class="nm">${t.name}</span><span class="sy">${raw(explorerLink(cfg, t.address, '$' + (t.symbol || '')))} ${raw(ponsLink(cfg, t.address))}</span></span></span>
+      <span role="cell" class="tok">${raw(avatar(t))}<span><span class="nm">${t.name}</span><span class="sy">${raw(explorerLink(cfg, t.address, '$' + (t.symbol || '')))} ${raw(ponsLink(cfg, t.address))}</span></span></span>
       <span role="cell" class="muted">${t.afterMin == null ? timeAgo(t.at).replace(' ago', '') : '+' + t.afterMin + 'm'}</span>
       <span role="cell" class="muted">${t.launchpad}</span>
       <span role="cell">${fmtInt(t.holders)}</span>
@@ -259,7 +259,7 @@ function renderFeed(latest) {
     const fresh = !seen.has(t.address) && seen.size > 0;
     seen.add(t.address);
     return html`<div class="feed-row${raw(fresh ? ' new' : '')}" role="row" tabindex="0" data-href="/copycat?address=${t.address}">
-      <span role="cell" class="tok"><span class="av">${(t.symbol || '?').slice(0, 2)}</span><span><span class="nm">${t.name}</span><span class="sy">$${t.symbol} · ${t.launchpad}</span></span></span>
+      <span role="cell" class="tok">${raw(avatar(t))}<span><span class="nm">${t.name}</span><span class="sy">$${t.symbol} · ${t.launchpad}</span></span></span>
       <span role="cell" class="muted">${timeAgo(t.at)}</span>
       <span role="cell">${raw(t.ticker ? `<span class="chip chip-accent">${esc(t.ticker)}</span>` : '<span class="muted">—</span>')}</span>
       <span role="cell" style="font-size: 12px; ${raw(t.copycat ? 'font-weight: 600; color: var(--danger)' : 'color: var(--muted)')}">${t.copycat ? `Like $${t.copycat.of} ${t.copycat.score}%` : 'Original'}</span>
@@ -323,7 +323,7 @@ function renderHot() {
     const bp = r.buyPct == null ? '<span class="muted">—</span>' : `<div class="bp"><div class="bp-track"><span style="width: ${r.buyPct}%"></span></div><small>${r.buyPct}% buys · ${r.buys}/${r.sells}</small></div>`;
     return html`<div class="hot-row" role="row" tabindex="0" data-href="/copycat?address=${r.address}">
       <span role="cell" class="rank${raw(i < 3 ? ' top' : '')}">${i + 1}</span>
-      <span role="cell" class="tok"><span class="av">${(r.symbol || '?').slice(0, 2)}</span><span><span class="nm">${r.name || r.symbol}</span><span class="sy">$${r.symbol}${r.ticker ? ' · ' + r.ticker : ''}${r.launchedAt ? ' · ' + timeAgo(r.launchedAt).replace(' ago', ' old') : ''}</span></span></span>
+      <span role="cell" class="tok">${raw(avatar(r))}<span><span class="nm">${r.name || r.symbol}</span><span class="sy">$${r.symbol}${r.ticker ? ' · ' + r.ticker : ''}${r.launchedAt ? ' · ' + timeAgo(r.launchedAt).replace(' ago', ' old') : ''}</span></span></span>
       <span role="cell" class="chg"><span style="display: flex; flex-direction: column; gap: 2px"><span style="color: ${raw(r.changePct == null ? 'var(--muted)' : up ? 'var(--accent-ink)' : 'var(--down)')}">${r.changePct == null ? '—' : fmtPct(r.changePct)}</span><small class="muted" style="font-weight: 500">${fmtPrice(r.priceUsd)}</small></span>${raw(spark(r.spark, up))}</span>
       <span role="cell" style="font-weight: 700">${fmtUsd(r.volumeUsd)}</span>
       <span role="cell">${fmtInt(r.trades)}</span>

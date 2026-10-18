@@ -76,6 +76,22 @@ export function explorerLink(cfg, address, text) {
   return `<a href="${esc(cfg.RH_EXPLORER_URL.replace(/\/$/, ''))}/address/${esc(address)}" target="_blank" rel="noopener">${label}</a>`;
 }
 
+// Token logos are served by our server at /img/<address>. The image sits over the initials, so a logo
+// that fails to load simply disappears and the initials show through.
+export function tokenImg(t, cls = 'tok-img') {
+  if (!t || !t.hasImage || !isAddress(t.address)) return '';
+  return `<img class="${esc(cls)}" src="/img/${esc(t.address.toLowerCase())}" alt="" loading="lazy" decoding="async">`;
+}
+export function avatar(t) {
+  return `<span class="av">${esc(((t && t.symbol) || '?').slice(0, 2))}${tokenImg(t)}</span>`;
+}
+if (typeof document !== 'undefined') {
+  document.addEventListener('error', (e) => {
+    const el = e.target;
+    if (el && el.tagName === 'IMG' && /(^| )(tok-img|nimg)( |$)/.test(el.className)) el.remove();
+  }, true);
+}
+
 // Link to the token's page on the Pons launchpad (PONS_TOKEN_URL + address).
 export function ponsUrl(cfg, address) {
   if (!cfg.PONS_TOKEN_URL || !isAddress(address)) return '';

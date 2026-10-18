@@ -49,7 +49,7 @@ Sample mode needs nothing. For real Robinhood Chain data:
 
 Any section that can't load live data falls back to sample data and is labelled, so the site never breaks. Open `/healthz` to see the mode and RPC block height.
 
-**Live data status.** By default (`DATA_SOURCE=chain`) HoodEye needs no paid API. The server indexes Pons itself over `RH_RPC_URL`: factory launch events (token, curve, creator) and bonding-curve buy/sell events, kept in memory for `INDEX_KEEP_HOURS` (`INDEX_BACKFILL_HOURS` are read on start). Stock token prices and ETH/USD come from DexPaprika's free API. Gap Watch fills in once the server has recorded a price at a market close. Holder counts, survival stats and image similarity still show "—" or sample numbers (see the roadmap). `DATA_SOURCE=bitquery` switches back to the older Bitquery setup.
+**Live data status.** By default (`DATA_SOURCE=chain`) HoodEye needs no paid API. The server indexes Pons itself over `RH_RPC_URL`: factory launch events (token, curve, creator) and bonding-curve buy/sell events, kept in memory for `INDEX_KEEP_HOURS` (`INDEX_BACKFILL_HOURS` are read on start). Stock token prices and ETH/USD come from DexPaprika's free API. Gap Watch fills in once the server has recorded a price at a market close. Token logos come from the image named in each launch transaction (IPFS through `IPFS_GATEWAY`, Filebase by default, or the deployer's own URL), fetched once by the server and served from `/img/<token>` with browser caching. Holder counts, survival stats and image similarity still show "—" or sample numbers (see the roadmap). `DATA_SOURCE=bitquery` switches back to the older Bitquery setup.
 
 ### Alerts on Telegram
 
@@ -112,7 +112,12 @@ Generated from `server/config.js` by `npm run env:example`. 🔒 = secret, never
 | **Copycat Eye** | | |
 | `COPYCAT_NAME_THRESHOLD` | `0.7` | Name similarity (0–1) above which a token is flagged as a copy. |
 | `COPYCAT_IMAGE_THRESHOLD` | `0.8` | Image similarity (0–1) above which a token is flagged as a copy (used once image matching is enabled). |
-| `IPFS_GATEWAY` | `https://ipfs.io/ipfs/` | Gateway used to show token logos stored on IPFS. |
+| **Token images** | | |
+| `IPFS_GATEWAY` | `https://ipfs.filebase.io/ipfs/` | IPFS gateway for token logos (ipfs://… images). The public Filebase gateway works without an account; a Filebase dedicated gateway (https://<name>.myfilebase.com/ipfs/) is faster and can resize. |
+| `IPFS_IMAGE_PARAMS` | _empty_ | Extra query added to IPFS image URLs. Only for a Filebase dedicated gateway, e.g. img-width=128&img-height=128&img-fit=cover&img-format=webp. Leave empty on the public gateway (it refuses resizing). |
+| `IMAGE_CACHE_MB` | `64` | Memory the server may use to keep token logos. |
+| `IMAGE_MAX_KB` | `3072` | Largest logo file the server will fetch. |
+| `IMAGE_TIMEOUT_MS` | `8000` | Timeout for fetching one logo. |
 | **Market Clock** | | |
 | `MARKET_TIMEZONE` | `America/New_York` | Time zone of the exchange. |
 | `MARKET_PREMARKET_OPEN` | `04:00` | Pre-market start, HH:MM in exchange time. |
@@ -175,7 +180,7 @@ Every data answer has `source: "live"` or `"sample"`; a fallback also includes `
 
 ```
 server/        index.js (HTTP + API), config.js (all env vars), data.js (live/sample switch),
-               live.js (chain indexer + DexPaprika), indexer.js, dexpaprika.js, live-bitquery.js (optional), sample.js (demo data), alerts.js (Telegram), util.js
+               live.js (chain indexer + DexPaprika), indexer.js, dexpaprika.js, images.js (token logos), live-bitquery.js (optional), sample.js (demo data), alerts.js (Telegram), util.js
 public/        radar, copycat, clock, family, roadmap pages + assets/ (CSS, JS, WebGL background)
 data/          roadmap.json
 scripts/       gen-env.js (.env.example + table above), check.js (pre-deploy check)
