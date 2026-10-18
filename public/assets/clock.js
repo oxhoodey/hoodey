@@ -127,7 +127,8 @@ async function load() {
     const regular = counts.reduce((a, c, h) => a + (h * 60 >= T.open && h * 60 < T.close ? c : 0), 0);
     const off = Math.round(((total - regular) / total) * 100);
     $('off-share').textContent = `${off}%`;
-    $('hours-sub').textContent = `Stock-themed meme launches per hour, last ${d.hours.days} day${d.hours.days === 1 ? '' : 's'}`;
+    const span = d.hours.hours && d.hours.hours < 48 ? `last ${d.hours.hours}h` : `last ${d.hours.days} day${d.hours.days === 1 ? '' : 's'}`;
+    $('hours-sub').textContent = `Pons launches per hour${d.hours.total ? ' (' + d.hours.total.toLocaleString('en-US') + ')' : ''}, ${span}`;
     $('hours').setAttribute('aria-label', `Meme launches per hour. ${off}% happened outside regular trading hours.`);
   } catch (err) {
     $('gaps').innerHTML = html`<div class="empty">Couldn't load: ${err.message}</div>`;

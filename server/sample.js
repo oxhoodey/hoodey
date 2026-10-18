@@ -37,18 +37,43 @@ const EVENTS = [
     tokens: [T('Diamond Paws', 'DPAWS', 1, 'Pons', 3880, 1.1e6, 12, null, 0, 2880, 'low'), T('Short Squeeze', 'SQZ', 2, 'Pons', 2017, 690e3, 16, null, 0, 1800, 'low'), T('GameStonk Cat', 'GSCAT', 6, 'Pools', 455, 88e3, 49, 'STONKCAT', 92, 80, 'high'), T('Ape Again', 'APEAG', 15, 'Pons', 812, 151e3, 33, null, 0, 360, 'medium')] }
 ];
 
+const QUIET = [
+  { ticker: 'AAPL', name: 'Apple', movePct: 0.8, agoMin: 3, seed: 5, price: 228.1, trades: 41 },
+  { ticker: 'MSTR', name: 'MicroStrategy', movePct: -1.6, agoMin: 2, seed: 17, price: 136.8, trades: 28 }
+];
+
+const LATEST = [
+  ['Eko Terminal', 'EKO', 1, null, 0, 'low', null], ['Tesla Doge', 'TDOGE', 2, 'TSLA', 0, 'high', ['TSLADOGE', 94]], ['Night Owl', 'NOCT', 4, null, 0, 'low', null],
+  ['Hero Cat', 'HERO', 6, null, 0, 'medium', null], ['StrataLLM', 'STRATA', 7, null, 0, 'high', ['STRATA', 100]], ['Elon Fart', 'EF', 9, 'TSLA', 0, 'low', null],
+  ['Aveno', 'AVENO', 12, null, 0, 'low', null], ['Chip Ban Frog', 'CBFROG', 15, 'NVDA', 0, 'high', ['CHIPFROG', 89]], ['Pond Life', 'POND', 18, null, 0, 'low', null],
+  ['Red Rocket', 'RROCK', 21, 'TSLA', 0, 'medium', null], ['Moon Duck', 'MDUCK', 26, null, 0, 'low', null], ['Base Boy', 'BBOY', 31, 'COIN', 0, 'high', ['BASEBOY', 97]],
+  ['Green Candle', 'GRN', 37, null, 0, 'low', null], ['Saylor Moon', 'SAYLR', 44, 'MSTR', 0, 'medium', null], ['Hood Frog', 'HFROG', 52, null, 0, 'low', null], ['Q3 Beat', 'BEAT', 58, 'TSLA', 0, 'low', null]
+].map(([name, symbol, agoMin, ticker, , risk, copy]) => ({
+  name, symbol, address: fakeAddr(symbol + 'L'), launchpad: 'Pons', at: ago(agoMin), ticker, afterMin: null,
+  holders: null, volumeUsd: null, top10Pct: null, lifespanMin: null, deployerLaunches: risk === 'high' ? 6 : risk === 'medium' ? 2 : 1,
+  copycat: copy ? { of: copy[0], score: copy[1] } : null, risk
+}));
+
 export function radar(rangeHours) {
-  const events = EVENTS
+  const spikes = EVENTS
     .filter((e) => e.agoMin <= rangeHours * 60)
     .map((e) => ({
-      ticker: e.ticker, name: e.name, up: e.movePct >= 0, movePct: e.movePct, trigger: e.trigger,
+      ticker: e.ticker, name: e.name, up: e.movePct >= 0, movePct: e.movePct, price: e.price, trades: 120, spike: true, trigger: e.trigger,
       at: ago(e.agoMin), spikePos: e.spikePos, series: series(e.price, e.movePct, e.spikePos, e.seed),
       launches: e.launches, firstAfterMin: Math.min(...e.tokens.map((t) => t.afterMin)), volumeUsd: e.volumeUsd, alivePct: e.alivePct,
       tokens: e.tokens.slice(0, config.RADAR_MAX_TOKENS)
     }));
+  const quiet = QUIET.map((q) => ({
+    ticker: q.ticker, name: q.name, up: q.movePct >= 0, movePct: q.movePct, price: q.price, trades: q.trades, spike: false,
+    trigger: `${q.trades} trades in ${rangeHours}h`, at: ago(q.agoMin), spikePos: null, series: series(q.price, q.movePct, 0.5, q.seed),
+    launches: 0, firstAfterMin: null, volumeUsd: null, alivePct: null, tokens: []
+  }));
   return {
     source: 'sample',
-    events,
+    moves: [...spikes, ...quiet],
+    events: spikes,
+    latest: LATEST,
+    stats: { windowHours: 24, launches: 1284, lastHour: 61, copycats: 217, deployers: 388, themed: 76 },
     hot: { source: 'sample', items: [['GME', 31], ['TSLA', 23], ['NVDA', 11], ['COIN', 7], ['AAPL', 4]].map(([ticker, count]) => ({ ticker, count })) },
     life: { source: 'sample', medianMin: 134, buckets: [{ label: '< 1h', pct: 38 }, { label: '1–6h', pct: 44 }, { label: '6–24h', pct: 11 }, { label: '> 24h', pct: 7 }] }
   };
@@ -95,7 +120,7 @@ export function clock() {
   return {
     source: 'sample',
     gaps: { source: 'sample', items: [['TSLA', 251.4, 3.0], ['GME', 27.85, 6.4], ['NVDA', 118.2, -2.1], ['COIN', 212.7, 1.2], ['AAPL', 228.1, -0.6]].map(([ticker, price, gapPct]) => ({ ticker, price, gapPct })) },
-    hours: { source: 'sample', counts: hours, days: 30 }
+    hours: { source: 'sample', counts: hours.map((h) => h * 9), themed: hours, total: hours.reduce((a, b) => a + b, 0) * 9, hours: 720, days: 30 }
   };
 }
 

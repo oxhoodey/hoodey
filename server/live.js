@@ -106,10 +106,12 @@ export async function tokenMeta(address) {
   return { name: decodeAbiString(nameHex), symbol: decodeAbiString(symbolHex) };
 }
 
+let blockCache = { at: 0, value: null };
 export async function chainStatus() {
   const out = {};
   if (config.RH_RPC_URL) {
-    try { out.block = parseInt(await rpc('eth_blockNumber', []), 16); } catch (e) { out.rpcError = e.message; }
+    if (Date.now() - blockCache.at < 4000 && blockCache.value) return { ...blockCache.value };
+    try { out.block = parseInt(await rpc('eth_blockNumber', []), 16); out.at = Date.now(); blockCache = { at: Date.now(), value: out }; } catch (e) { out.rpcError = e.message; }
   }
   return out;
 }
@@ -202,6 +204,19 @@ function similarOlder(token, pool) {
   return best && best.score >= config.COPYCAT_NAME_THRESHOLD ? best : null;
 }
 
+function tokenRow(l, all, creatorCounts, refT) {
+  const copy = similarOlder(l, all);
+  const repeat = creatorCounts[l.creator] || 0;
+  return {
+    name: l.name, symbol: l.symbol, address: l.address, launchpad: l.launchpad, at: l.at, ticker: l.ticker || null,
+    afterMin: refT == null ? null : Math.round((Date.parse(l.at) - refT) / 60000),
+    holders: null, volumeUsd: null, top10Pct: null, lifespanMin: null,
+    copycat: copy ? { of: copy.of, score: Math.round(copy.score * 100) } : null,
+    deployerLaunches: repeat,
+    risk: copy || repeat >= 5 ? 'high' : repeat >= 2 ? 'medium' : 'low'
+  };
+}
+
 export async function radar(rangeHours) {
   const now = Date.now();
   const from = now - rangeHours * 3600e3;
@@ -209,57 +224,62 @@ export async function radar(rangeHours) {
   const creatorCounts = {};
   all.forEach((l) => { creatorCounts[l.creator] = (creatorCounts[l.creator] || 0) + 1; });
 
+  // Every watched stock token gets a card, spike or not, so the page is never empty.
   const watched = config.stocks.filter((s) => s.address);
-  const events = [];
+  const moves = [];
   const errors = [];
   for (const s of watched) {
     try {
       const tr = (await stockTrades(s.address)).filter((x) => x.t >= from - 3600e3);
       const inRange = tr.filter((x) => x.t >= from);
-      if (inRange.length < config.SPIKE_MIN_TRADES) continue;
-      // Median prices, so one odd trade in a thin market can't fake a spike.
+      if (!tr.length) continue;
+      // Median prices, so one odd trade in a thin market can't fake a move.
       const priorTrades = tr.filter((x) => x.t < from);
-      const startP = median((priorTrades.length ? priorTrades.slice(-5) : inRange.slice(0, 5)).map((x) => x.p));
-      const lastP = median(inRange.slice(-3).map((x) => x.p));
+      const startP = median((priorTrades.length ? priorTrades.slice(-5) : (inRange.length ? inRange : tr).slice(0, 5)).map((x) => x.p));
+      const lastP = median((inRange.length ? inRange : tr).slice(-3).map((x) => x.p));
       const movePct = ((lastP - startP) / startP) * 100;
-      if (Math.abs(movePct) < config.SPIKE_THRESHOLD_PCT) continue;
-      // The move must hold: at least SPIKE_MIN_TRADES trades past the halfway price.
+      // A spike must be big enough and hold: SPIKE_MIN_TRADES trades past the halfway price.
       const half = startP + (lastP - startP) / 2;
       const past = inRange.filter((x) => (movePct > 0 ? x.p >= half : x.p <= half));
-      if (past.length < config.SPIKE_MIN_TRADES) continue;
-      const cross = past[0];
-      const themed = all.filter((l) => l.ticker === s.ticker && Date.parse(l.at) >= cross.t).sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
-      events.push({
-        ticker: s.ticker, name: s.name, up: movePct >= 0, movePct: +movePct.toFixed(1), trigger: `${movePct >= 0 ? 'Up' : 'Down'} ${Math.abs(movePct).toFixed(1)}% in ${rangeHours}h`,
-        at: new Date(cross.t).toISOString(), spikePos: (cross.t - from) / (now - from), series: bucketSeries(tr, from, now),
-        launches: themed.length, firstAfterMin: themed.length ? Math.round((Date.parse(themed[0].at) - cross.t) / 60000) : null,
+      const spike = Math.abs(movePct) >= config.SPIKE_THRESHOLD_PCT && inRange.length >= config.SPIKE_MIN_TRADES && past.length >= config.SPIKE_MIN_TRADES;
+      const refT = spike ? past[0].t : from;
+      const themed = all.filter((l) => l.ticker === s.ticker && Date.parse(l.at) >= refT).sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+      moves.push({
+        ticker: s.ticker, name: s.name, up: movePct >= 0, movePct: +movePct.toFixed(2), price: +lastP.toFixed(2), trades: inRange.length, spike,
+        trigger: spike ? `Spike · ${movePct >= 0 ? 'up' : 'down'} ${Math.abs(movePct).toFixed(1)}%` : (inRange.length ? `${inRange.length} trades in ${rangeHours}h` : 'No trades in range'),
+        at: new Date(spike ? refT : (inRange.length ? inRange[inRange.length - 1].t : tr[tr.length - 1].t)).toISOString(),
+        spikePos: spike ? (refT - from) / (now - from) : null, series: bucketSeries(tr, from, now),
+        launches: themed.length, firstAfterMin: spike && themed.length ? Math.round((Date.parse(themed[0].at) - refT) / 60000) : null,
         volumeUsd: null, alivePct: null,
-        tokens: themed.slice(0, config.RADAR_MAX_TOKENS).map((l) => {
-          const copy = similarOlder(l, all);
-          const repeat = creatorCounts[l.creator] || 0;
-          return {
-            name: l.name, symbol: l.symbol, address: l.address, afterMin: Math.round((Date.parse(l.at) - cross.t) / 60000), launchpad: l.launchpad,
-            holders: null, volumeUsd: null, top10Pct: null,
-            copycat: copy ? { of: copy.of, score: Math.round(copy.score * 100) } : null,
-            lifespanMin: null,
-            risk: copy || repeat >= 5 ? 'high' : repeat >= 2 ? 'medium' : 'low'
-          };
-        })
+        tokens: themed.slice(0, config.RADAR_MAX_TOKENS).map((l) => tokenRow(l, all, creatorCounts, spike ? refT : null))
       });
     } catch (e) {
       errors.push(`${s.ticker}: ${e.message}`);
     }
   }
-  if (!watched.length) throw new Error('No stock token addresses in STOCK_TOKENS');
-  if (errors.length === watched.length) throw new Error(errors.join(' | '));
-  events.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+  if (watched.length && errors.length === watched.length) throw new Error(errors.join(' | '));
+  moves.sort((a, b) => (b.spike - a.spike) || Math.abs(b.movePct) - Math.abs(a.movePct));
 
   const dayAgo = now - 24 * 3600e3;
   const counts = {};
   all.filter((l) => l.ticker && Date.parse(l.at) >= dayAgo).forEach((l) => { counts[l.ticker] = (counts[l.ticker] || 0) + 1; });
   const hot = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([ticker, count]) => ({ ticker, count }));
 
-  return { source: 'live', events, hot: { source: 'live', items: hot }, errors };
+  // Live pulse: what the chain did recently, over the window the fetched launches cover.
+  const oldest = all.length ? Math.min(...all.map((l) => Date.parse(l.at))) : now;
+  const windowStart = Math.max(oldest, dayAgo);
+  const recent = all.filter((l) => Date.parse(l.at) >= windowStart);
+  const latest = all.slice(0, 16).map((l) => tokenRow(l, all, creatorCounts, null));
+  const stats = {
+    windowHours: +((now - windowStart) / 3600e3).toFixed(1),
+    launches: recent.length,
+    lastHour: all.filter((l) => Date.parse(l.at) >= now - 3600e3).length,
+    copycats: recent.filter((l) => similarOlder(l, all)).length,
+    deployers: new Set(recent.map((l) => l.creator)).size,
+    themed: recent.filter((l) => l.ticker).length
+  };
+
+  return { source: 'live', moves, events: moves.filter((m) => m.spike), latest, stats, hot: { source: 'live', items: hot }, errors };
 }
 
 export async function copycat(address) {
@@ -275,6 +295,7 @@ export async function copycat(address) {
     .filter((o) => o.address !== token.address && Date.parse(o.at) <= Date.parse(token.at))
     .map((o) => ({ o, score: Math.max(nameSimilarity(token.name, o.name), nameSimilarity(token.symbol, o.symbol)) }))
     .sort((a, b) => b.score - a.score)
+    .filter((x, i, arr) => arr.findIndex((y) => y.o.name === x.o.name && y.o.symbol === x.o.symbol) === i)
     .slice(0, 5);
   const top = scored[0];
   const byCreator = token.creator ? all.filter((l) => l.creator === token.creator) : [];
@@ -303,14 +324,17 @@ export async function copycat(address) {
 export async function clockHours() {
   const all = await launches();
   const counts = Array(24).fill(0);
+  const themed = Array(24).fill(0);
   let oldest = Date.now();
-  all.filter((l) => l.ticker).forEach((l) => {
+  all.forEach((l) => {
     const d = new Date(l.at);
-    counts[zonedParts(d).hour]++;
+    const h = zonedParts(d).hour;
+    counts[h]++;
+    if (l.ticker) themed[h]++;
     oldest = Math.min(oldest, d.getTime());
   });
-  if (!counts.some(Boolean)) throw new Error('No stock-themed launches in the fetched window');
-  return { source: 'live', counts, days: Math.max(1, Math.round((Date.now() - oldest) / 86400e3)) };
+  if (!all.length) throw new Error('No launches in the fetched window');
+  return { source: 'live', counts, themed, total: all.length, hours: Math.max(1, Math.round((Date.now() - oldest) / 3600e3)), days: Math.max(1, Math.round((Date.now() - oldest) / 86400e3)) };
 }
 
 export async function clockGaps() {

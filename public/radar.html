@@ -21,20 +21,62 @@
 <header class="top"></header>
 <main style="display: contents">
 
-<section class="hero">
-  <div>
-    <span class="eyebrow">Stock → Meme Radar · Robinhood Chain</span>
-    <h1 class="display">Stocks move. Memes follow.</h1>
+<section class="hero-x" aria-label="Live overview">
+  <div class="hx-left">
+    <span class="live-line"><span class="live-dot"></span><span id="live-label">LIVE · ROBINHOOD CHAIN · BLOCK</span> <span class="mono" id="block">#—</span></span>
+    <h1 class="display xl">Stocks move.<br>Memes follow.<br><span class="grad">We see both.</span></h1>
+    <p class="lede" style="max-width: 560px">Real-time eyes on every Pons launch: which stock set it off, who deployed it, and whether it's a copy. Read-only, no wallet.</p>
+    <div class="pulse-grid" id="pulse" aria-live="polite">
+      <div class="pulse"><span class="v" data-k="launches">—</span><span class="k" id="pulse-window">Launches · 24h</span></div>
+      <div class="pulse"><span class="v" data-k="lastHour">—</span><span class="k">Last hour</span></div>
+      <div class="pulse warn"><span class="v" data-k="copycats">—</span><span class="k">Copycats flagged</span></div>
+      <div class="pulse"><span class="v" data-k="deployers">—</span><span class="k">Deployers</span></div>
+    </div>
+    <div class="hero-cta">
+      <a class="btn btn-lg btn-primary" href="#feed">See live launches</a>
+      <a class="btn btn-lg" href="/copycat">Scan a token</a>
+    </div>
   </div>
-  <div class="segmented" role="group" aria-label="Time range" id="range">
-    <button type="button" data-h="1">1h</button>
-    <button type="button" data-h="6">6h</button>
-    <button type="button" data-h="24">24h</button>
+  <div class="scope-wrap">
+    <div class="scope" aria-label="Radar of the latest launches" role="img" id="scope-box">
+      <div class="scope-face" id="scope">
+        <svg class="grid" viewBox="0 0 100 100" aria-hidden="true">
+          <g fill="none" stroke="#1F5A33" stroke-width="0.3">
+            <circle cx="50" cy="50" r="16"/><circle cx="50" cy="50" r="30"/><circle cx="50" cy="50" r="44"/>
+            <line x1="50" y1="2" x2="50" y2="98"/><line x1="2" y1="50" x2="98" y2="50"/>
+            <line x1="16" y1="16" x2="84" y2="84" stroke-dasharray="0.8 1.6"/><line x1="84" y1="16" x2="16" y2="84" stroke-dasharray="0.8 1.6"/>
+          </g>
+          <g fill="#3E8F57" font-size="2.4" font-family="ui-monospace, monospace">
+            <text x="51" y="35.5">15m</text><text x="51" y="21.5">30m</text><text x="51" y="7.5">60m</text>
+          </g>
+        </svg>
+        <div class="sweep" aria-hidden="true"></div>
+        <div id="blips"></div>
+        <div class="scope-eye" aria-hidden="true"><svg width="40" height="40" viewBox="0 0 64 64"><circle cx="32" cy="32" r="23" fill="none" stroke="#1E6B3A" stroke-width="2"/><circle cx="32" cy="32" r="16" style="fill: var(--accent)"/><circle cx="32" cy="32" r="7" fill="#0B1F14"/><circle cx="35.5" cy="28.5" r="2.4" fill="#fff"/></svg></div>
+        <span class="scope-label" style="left: 50%; top: 9%; transform: translateX(-50%)">SCANNING PONS</span>
+        <span class="scope-label" style="left: 50%; bottom: 8%; transform: translateX(-50%)" id="targets">— TARGETS</span>
+      </div>
+    </div>
+    <div class="readout" aria-live="off"><span class="tag">CONTACT</span><span class="txt" id="readout">Acquiring signal</span><span class="cursor" aria-hidden="true"></span></div>
   </div>
 </section>
 
-<section aria-label="Latest stock moves">
-  <div class="panel-head" style="margin-bottom: 14px"><span class="small muted" id="cards-note"></span><span class="src" id="src-events" hidden></span></div>
+<div class="ticker" aria-label="Latest launches"><div class="ticker-track" id="ticker"></div></div>
+
+<section aria-label="Stock tokens">
+  <div class="hero" style="margin-bottom: 18px">
+    <div>
+      <span class="eyebrow">Stock → Meme Radar</span>
+      <h2 style="font-size: 30px; font-weight: 700; letter-spacing: -0.02em">Stock tokens, right now</h2>
+      <span class="small muted" id="cards-note"></span>
+    </div>
+    <div style="display: flex; gap: 12px; align-items: center"><span class="src" id="src-events" hidden></span>
+    <div class="segmented" role="group" aria-label="Time range" id="range">
+      <button type="button" data-h="1">1h</button>
+      <button type="button" data-h="6">6h</button>
+      <button type="button" data-h="24">24h</button>
+    </div></div>
+  </div>
   <div class="cards" id="cards"><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
 </section>
 
@@ -73,6 +115,14 @@
     </section>
   </aside>
 </div>
+
+<section class="panel" id="feed" aria-label="Latest Pons launches" style="scroll-margin-top: 20px">
+  <div class="panel-head" style="align-items: center">
+    <div style="display: flex; flex-direction: column; gap: 2px"><span class="eyebrow">Live feed</span><h2 style="font-size: 24px; font-weight: 700; letter-spacing: -0.02em">Latest Pons launches</h2></div>
+    <span class="small muted">Every launch, checked for copies and repeat deployers. Click one to open it in Copycat Eye.</span>
+  </div>
+  <div class="table-scroll"><div class="ttable" style="min-width: 760px" id="feed-rows" role="table" aria-label="Latest launches"></div></div>
+</section>
 
 </main>
 <footer class="foot"></footer>
