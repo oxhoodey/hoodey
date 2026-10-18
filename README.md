@@ -97,6 +97,8 @@ Generated from `server/config.js` by `npm run env:example`. 🔒 = secret, never
 | `SPIKE_MIN_TRADES` | `3` | Trades needed past the halfway price before a move counts as a spike. Stops a single odd trade in a thin market from triggering the radar. |
 | `SPIKE_LOOKBACK_HOURS` | `6` | Default time window for the radar (1, 6 or 24 are offered in the UI). |
 | `RADAR_MAX_TOKENS` | `12` | Most themed tokens listed per spike. |
+| `TRENDING_TRADE_LIMIT` | `3000` | How many of the latest Robinhood Chain trades to scan for the "Hot right now" board. |
+| `TRENDING_MAX_ROWS` | `20` | Most tokens shown on the "Hot right now" board. |
 | **Copycat Eye** | | |
 | `COPYCAT_NAME_THRESHOLD` | `0.7` | Name similarity (0–1) above which a token is flagged as a copy. |
 | `COPYCAT_IMAGE_THRESHOLD` | `0.8` | Image similarity (0–1) above which a token is flagged as a copy (used once image matching is enabled). |

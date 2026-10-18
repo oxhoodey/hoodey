@@ -127,6 +127,9 @@ async function api(req, res, url) {
     case '/api/radar':
       if (!f.radar) return off('Radar');
       return json(res, 200, await data.radar(parseInt(q.get('range') || String(config.SPIKE_LOOKBACK_HOURS), 10)), cors);
+    case '/api/trending':
+      if (!f.radar) return off('Radar');
+      return json(res, 200, await data.trending(), cors);
     case '/api/copycat/latest':
       if (!f.copycat) return off('Copycat Eye');
       return json(res, 200, await data.copycatLatest(), cors);

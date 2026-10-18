@@ -43,3 +43,5 @@ export async function clock() {
 export const family = (ticker) => liveOr(`family:${ticker}`, () => live.family(ticker), () => sample.family(ticker));
 export const wallet = (address) => liveOr(`wallet:${address.toLowerCase()}`, () => live.wallet(address), () => sample.wallet(address));
 export const chainStatus = () => (useLive() ? live.chainStatus() : Promise.resolve({}));
+
+export const trending = () => liveOr('trending', () => live.trending(), () => sample.trending());

@@ -281,6 +281,68 @@ async function pollBlock() {
 pollBlock();
 setInterval(pollBlock, 5000);
 
+// ── Hot right now ─────────────────────────────────────────────────────
+const hot = { data: null, sort: 'volume', filters: {} };
+try { const saved = JSON.parse(localStorage.getItem('hoodeye.hot') || '{}'); if (saved.sort) hot.sort = saved.sort; if (saved.filters) hot.filters = saved.filters; } catch { /* storage unavailable */ }
+const saveHot = () => { try { localStorage.setItem('hoodeye.hot', JSON.stringify({ sort: hot.sort, filters: hot.filters })); } catch { /* ignore */ } };
+
+function fmtPrice(p) {
+  if (p == null || !Number.isFinite(p) || p <= 0) return '—';
+  if (p >= 1) return '$' + p.toFixed(2);
+  const zeros = Math.floor(-Math.log10(p));
+  if (zeros < 4) return '$' + p.toPrecision(3);
+  const sub = String(zeros).split('').map((c) => '₀₁₂₃₄₅₆₇₈₉'[c]).join('');
+  const digits = Math.round(p * 10 ** (zeros + 3)).toString().slice(0, 3);
+  return `$0.0${sub}${digits}`; // DEX style: 0.0₅213 = 0.00000213
+}
+function spark(vals, up) {
+  if (!vals || vals.length < 2) return '';
+  const min = Math.min(...vals), max = Math.max(...vals), span = max - min || 1;
+  const pts = vals.map((v, i) => `${((i / (vals.length - 1)) * 64).toFixed(1)},${(23 - ((v - min) / span) * 20).toFixed(1)}`).join(' ');
+  return `<svg viewBox="0 0 64 26" aria-hidden="true"><polyline points="${pts}" fill="none" style="stroke: ${up ? 'var(--accent-ink)' : 'var(--down)'}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
+function renderHot() {
+  const d = hot.data;
+  if (!d) return;
+  sourceBadge($('src-trending'), d);
+  $('hot-sub').textContent = `Most traded Pons tokens in the last ${d.windowMin} min · ${fmtInt(d.totalTrades)} trades scanned · every token checked for red flags.`;
+  document.querySelectorAll('#hot-sort button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.s === hot.sort)));
+  document.querySelectorAll('#hot-filters button').forEach((b) => b.setAttribute('aria-pressed', String(!!hot.filters[b.dataset.f])));
+  const F = hot.filters;
+  let rows = d.rows.filter((r) =>
+    !(F.noCopy && r.copycat) && !(F.noRepeat && r.deployerLaunches >= 3) && !(F.noWhale && r.topWalletPct != null && r.topWalletPct >= 50) &&
+    !(F.fresh && !(r.launchedAt && Date.now() - Date.parse(r.launchedAt) < 3600e3)) && !(F.stock && !r.ticker));
+  const by = { volume: (r) => r.volumeUsd, traders: (r) => r.traders, momentum: (r) => r.changePct ?? -1e9, buy: (r) => r.buyPct ?? -1, new: (r) => (r.launchedAt ? Date.parse(r.launchedAt) : 0) }[hot.sort];
+  rows = [...rows].sort((a, b) => by(b) - by(a));
+  const head = '<div class="hot-row head" role="row"><span role="columnheader">#</span><span role="columnheader">TOKEN</span><span role="columnheader">PRICE · CHANGE</span><span role="columnheader">VOLUME</span><span role="columnheader">TRADES</span><span role="columnheader">TRADERS</span><span role="columnheader">BUY PRESSURE</span><span role="columnheader">TOP WALLET</span><span role="columnheader">FLAGS</span><span></span></div>';
+  const body = rows.map((r, i) => {
+    const up = (r.changePct ?? 0) >= 0;
+    const flags = r.flags.length ? r.flags.map((f) => `<span class="flag-c ${esc(f.k)}">${esc(f.label)}</span>`).join('') : '<span class="flag-c clean">No red flags</span>';
+    const bp = r.buyPct == null ? '<span class="muted">—</span>' : `<div class="bp"><div class="bp-track"><span style="width: ${r.buyPct}%"></span></div><small>${r.buyPct}% buys · ${r.buys}/${r.sells}</small></div>`;
+    return html`<a class="hot-row" role="row" href="/copycat?address=${r.address}">
+      <span role="cell" class="rank${raw(i < 3 ? ' top' : '')}">${i + 1}</span>
+      <span role="cell" class="tok"><span class="av">${(r.symbol || '?').slice(0, 2)}</span><span><span class="nm">${r.name || r.symbol}</span><span class="sy">$${r.symbol}${r.ticker ? ' · ' + r.ticker : ''}${r.launchedAt ? ' · ' + timeAgo(r.launchedAt).replace(' ago', ' old') : ''}</span></span></span>
+      <span role="cell" class="chg"><span style="display: flex; flex-direction: column; gap: 2px"><span style="color: ${raw(r.changePct == null ? 'var(--muted)' : up ? 'var(--accent-ink)' : 'var(--down)')}">${r.changePct == null ? '—' : fmtPct(r.changePct)}</span><small class="muted" style="font-weight: 500">${fmtPrice(r.priceUsd)}</small></span>${raw(spark(r.spark, up))}</span>
+      <span role="cell" style="font-weight: 700">${fmtUsd(r.volumeUsd)}</span>
+      <span role="cell">${fmtInt(r.trades)}</span>
+      <span role="cell">${fmtInt(r.traders)}</span>
+      <span role="cell">${raw(bp)}</span>
+      <span role="cell" style="${raw(r.topWalletPct >= 50 ? 'color: var(--danger); font-weight: 700' : '')}">${r.topWalletPct == null ? '—' : r.topWalletPct + '%'}</span>
+      <span role="cell" class="flagset">${raw(flags)}</span>
+      <span class="go" aria-hidden="true">›</span>
+    </a>`;
+  }).join('');
+  $('hot-rows').innerHTML = head + (body || `<div class="empty">No token passes these filters right now. Turn a filter off to see more.</div>`);
+}
+
+async function loadHot() {
+  try { hot.data = await api('/api/trending'); renderHot(); }
+  catch (err) { $('hot-rows').innerHTML = html`<div class="empty">Couldn't load the board: ${err.message}</div>`; }
+}
+$('hot-sort').addEventListener('click', (e) => { const b = e.target.closest('button[data-s]'); if (!b) return; hot.sort = b.dataset.s; saveHot(); renderHot(); });
+$('hot-filters').addEventListener('click', (e) => { const b = e.target.closest('button[data-f]'); if (!b) return; hot.filters[b.dataset.f] = !hot.filters[b.dataset.f]; saveHot(); renderHot(); });
+
 async function load() {
   try {
     const d = await api(`/api/radar?range=${state.range}`);
@@ -347,5 +409,7 @@ if (cfg.features.walletWatch) {
 }
 
 renderRange();
+loadHot();
 await load();
 every(cfg, load);
+every(cfg, loadHot);

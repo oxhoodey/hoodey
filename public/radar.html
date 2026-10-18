@@ -56,6 +56,36 @@
 
 <div class="ticker" aria-label="Latest launches"><div class="ticker-track" id="ticker"></div></div>
 
+<section class="panel" id="hot-board" aria-label="Hot right now" style="gap: 18px">
+  <div class="panel-head" style="align-items: flex-end">
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <span class="eyebrow">Trader board</span>
+      <h2 style="font-size: 30px; font-weight: 700; letter-spacing: -0.02em">Hot right now</h2>
+      <span class="small muted" id="hot-sub">Most traded Pons tokens, checked for red flags.</span>
+    </div>
+    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; max-width: 100%; min-width: 0">
+      <span class="src" id="src-trending" hidden></span>
+      <div class="segmented" role="group" aria-label="Sort by" id="hot-sort">
+        <button type="button" data-s="volume">Volume</button>
+        <button type="button" data-s="traders">Traders</button>
+        <button type="button" data-s="momentum">Momentum</button>
+        <button type="button" data-s="buy">Buy pressure</button>
+        <button type="button" data-s="new">Newest</button>
+      </div>
+    </div>
+  </div>
+  <div class="filters" role="group" aria-label="Safety filters" id="hot-filters">
+    <span class="small muted" style="font-weight: 600">Filters</span>
+    <button type="button" data-f="noCopy">Hide copies</button>
+    <button type="button" data-f="noRepeat">Hide repeat deployers</button>
+    <button type="button" data-f="noWhale">Hide whale-heavy</button>
+    <button type="button" data-f="fresh">Under 1h old</button>
+    <button type="button" data-f="stock">Stock narratives only</button>
+  </div>
+  <div class="table-scroll"><div class="ttable" style="min-width: 980px" role="table" aria-label="Hot Pons tokens" id="hot-rows"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div></div>
+  <p class="note">Buy pressure = share of volume from buys. Top wallet = share of volume from the single biggest trader. Flags are heuristics, not proof. Not financial advice.</p>
+</section>
+
 <section aria-label="Stock tokens">
   <div class="hero" style="margin-bottom: 18px">
     <div>

@@ -282,6 +282,111 @@ export async function radar(rangeHours) {
   return { source: 'live', moves, events: moves.filter((m) => m.spike), latest, stats, hot: { source: 'live', items: hot }, errors };
 }
 
+// ── Hot right now: recent Pons token trades, aggregated per token ─────
+const TRENDING_Q = `
+query HotTrades($limit: Int!) {
+  Trading {
+    Trades(
+      limit: {count: $limit}
+      orderBy: {descending: Block_Time}
+      where: { Pair: { Market: {Network: {is: "Robinhood"}} } }
+    ) {
+      Block { Time }
+      Side
+      PriceInUsd
+      AmountsInUsd { Quote }
+      Trader { Address }
+      Pair { Token { Address Name Symbol } Market { Protocol } }
+    }
+  }
+}`;
+
+function recentTrades() {
+  return sharedFetch('hotTrades', async () => {
+    const data = await bitquery(TRENDING_Q, { limit: config.TRENDING_TRADE_LIMIT });
+    return ((data && data.Trading && data.Trading.Trades) || []).map((r) => ({
+      t: Date.parse(r.Block.Time),
+      side: String(r.Side || '').toLowerCase(),
+      p: Number(r.PriceInUsd),
+      usd: Number(r.AmountsInUsd && r.AmountsInUsd.Quote) || 0,
+      trader: String((r.Trader && r.Trader.Address) || '').toLowerCase(),
+      token: String((r.Pair && r.Pair.Token && r.Pair.Token.Address) || '').toLowerCase(),
+      name: r.Pair && r.Pair.Token && r.Pair.Token.Name,
+      symbol: r.Pair && r.Pair.Token && r.Pair.Token.Symbol,
+      protocol: String((r.Pair && r.Pair.Market && r.Pair.Market.Protocol) || '').toLowerCase()
+    })).filter((x) => Number.isFinite(x.t) && isAddress(x.token));
+  });
+}
+
+export async function trending() {
+  const [trades, all] = await Promise.all([recentTrades(), launches()]);
+  const byAddr = new Map(all.map((l) => [l.address, l]));
+  const stockAddrs = new Set(config.stocks.map((s) => s.address).filter(Boolean));
+  const creatorCounts = {};
+  all.forEach((l) => { creatorCounts[l.creator] = (creatorCounts[l.creator] || 0) + 1; });
+  // Pons tokens only: launched through Pons (in our launch list) or traded on the Pons curve.
+  const pons = trades.filter((x) => !stockAddrs.has(x.token) && (byAddr.has(x.token) || x.protocol.includes('pons')));
+  if (!pons.length) throw new Error('No recent Pons token trades');
+  const now = Date.now();
+  const oldest = Math.min(...pons.map((x) => x.t));
+  const groups = new Map();
+  pons.forEach((x) => { if (!groups.has(x.token)) groups.set(x.token, []); groups.get(x.token).push(x); });
+
+  const rows = [...groups.entries()].map(([addr, list]) => {
+    list.sort((a, b) => a.t - b.t);
+    const l = byAddr.get(addr);
+    const vol = list.reduce((a, x) => a + x.usd, 0);
+    const buys = list.filter((x) => x.side === 'buy');
+    const sells = list.filter((x) => x.side === 'sell');
+    const sided = buys.length + sells.length > 0;
+    const buyVol = buys.reduce((a, x) => a + x.usd, 0), sellVol = sells.reduce((a, x) => a + x.usd, 0);
+    const perTrader = {};
+    list.forEach((x) => { perTrader[x.trader] = (perTrader[x.trader] || 0) + x.usd; });
+    const traders = Object.keys(perTrader).length;
+    const topShare = vol > 0 ? Math.max(...Object.values(perTrader)) / vol : null;
+    const priced = list.filter((x) => x.p > 0);
+    const first = priced.length ? median(priced.slice(0, 3).map((x) => x.p)) : null;
+    const last = priced.length ? median(priced.slice(-3).map((x) => x.p)) : null;
+    // 12-point price line over the window
+    const spark = [];
+    if (priced.length) {
+      let i = 0, lastP = priced[0].p;
+      for (let k = 0; k < 12; k++) {
+        const edge = oldest + ((now - oldest) * (k + 1)) / 12;
+        while (i < priced.length && priced[i].t <= edge) { lastP = priced[i].p; i++; }
+        spark.push(+lastP.toPrecision(6));
+      }
+    }
+    const token = l || { address: addr, name: list[0].name || '', symbol: list[0].symbol || '', creator: '', at: null, ticker: tagStock(list[0].name, list[0].symbol), launchpad: 'Pons' };
+    const copy = l ? similarOlder(l, all) : null;
+    const repeat = l ? creatorCounts[l.creator] || 0 : 0;
+    const flags = [];
+    if (copy) flags.push({ k: 'copy', label: `Copy of $${copy.of}` });
+    if (repeat >= 3) flags.push({ k: 'repeat', label: `Deployer x${repeat}` });
+    if (topShare != null && traders >= 2 && topShare >= 0.5) flags.push({ k: 'whale', label: `1 wallet ${Math.round(topShare * 100)}%` });
+    if (traders <= 2 && list.length >= 8) flags.push({ k: 'wash', label: 'Few traders, many trades' });
+    return {
+      address: addr, name: token.name, symbol: token.symbol, launchedAt: token.at, ticker: token.ticker || null,
+      volumeUsd: Math.round(vol), trades: list.length, traders,
+      buyPct: sided && buyVol + sellVol > 0 ? Math.round((buyVol / (buyVol + sellVol)) * 100) : null,
+      buys: buys.length, sells: sells.length,
+      priceUsd: last, changePct: first && last ? +(((last - first) / first) * 100).toFixed(1) : null,
+      spark, topWalletPct: topShare == null ? null : Math.round(topShare * 100),
+      copycat: copy ? { of: copy.of, score: Math.round(copy.score * 100) } : null,
+      deployerLaunches: repeat,
+      flags,
+      risk: flags.some((f) => f.k === 'copy' || f.k === 'wash') || repeat >= 5 ? 'high' : flags.length ? 'medium' : 'low'
+    };
+  });
+
+  return {
+    source: 'live',
+    windowMin: Math.max(1, Math.round((now - oldest) / 60000)),
+    totalTrades: pons.length,
+    rows: rows.sort((a, b) => b.volumeUsd - a.volumeUsd || b.trades - a.trades).slice(0, config.TRENDING_MAX_ROWS)
+  };
+}
+
 export async function copycat(address) {
   const all = await launches();
   let token = address ? all.find((l) => l.address === address.toLowerCase()) : all[0];
@@ -425,6 +530,7 @@ export function startWarmer() {
   if (!config.BITQUERY_API_KEY) return;
   const warm = async () => {
     try { await launches(); } catch (e) { log.warn('warm launches:', e.message.slice(0, 120)); }
+    try { await recentTrades(); } catch (e) { log.warn('warm hot trades:', e.message.slice(0, 120)); }
     for (const s of config.stocks.filter((x) => x.address)) {
       try { await stockTrades(s.address); } catch (e) { log.warn(`warm ${s.ticker}:`, e.message.slice(0, 120)); }
     }

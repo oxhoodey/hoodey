@@ -183,3 +183,38 @@ export function wallet(address) {
     note: 'Sample mode: demo numbers, not this wallet’s real results.'
   };
 }
+
+const HOT = [
+  ['Elon Fart', 'EF', 'TSLA', 9, 48200, 412, 131, 71, 38.4, 14, []],
+  ['Eko Terminal', 'EKO', null, 1, 31800, 268, 97, 82, 112.0, 9, []],
+  ['StrataLLM', 'STRATA', null, 7, 27400, 190, 12, 64, -22.5, 41, [['copy', 'Copy of $STRATA'], ['repeat', 'Deployer x6']]],
+  ['Night Owl', 'NOCT', null, 4, 21900, 205, 88, 58, 17.3, 11, []],
+  ['Tesla Doge', 'TDOGE', 'TSLA', 2, 18650, 151, 64, 55, 9.8, 19, [['copy', 'Copy of $TSLADOGE'], ['repeat', 'Deployer x14']]],
+  ['Hero Cat', 'HERO', null, 6, 14300, 132, 49, 47, -6.1, 23, [['repeat', 'Deployer x2']]],
+  ['Saylor Moon', 'SAYLR', 'MSTR', 44, 11200, 96, 41, 61, 4.4, 17, []],
+  ['Pond Life', 'POND', null, 18, 9400, 88, 2, 50, 1.2, 52, [['whale', '1 wallet 52%'], ['wash', 'Few traders, many trades']]],
+  ['Chip Ban Frog', 'CBFROG', 'NVDA', 15, 7900, 71, 30, 39, -14.8, 28, [['copy', 'Copy of $CHIPFROG']]],
+  ['Green Candle', 'GRN', null, 37, 6100, 59, 27, 66, 21.6, 15, []],
+  ['Moon Duck', 'MDUCK', null, 26, 4800, 44, 21, 52, -2.3, 22, []],
+  ['Base Boy', 'BBOY', 'COIN', 31, 3900, 37, 9, 33, -31.0, 61, [['copy', 'Copy of $BASEBOY'], ['whale', '1 wallet 61%']]]
+];
+
+export function trending() {
+  const rows = HOT.map(([name, symbol, ticker, ageMin, volumeUsd, trades, traders, buyPct, changePct, topWalletPct, flags], i) => {
+    const rnd = seededRandom(hashString(symbol));
+    const spark = [];
+    let v = 1;
+    for (let k = 0; k < 12; k++) { v *= 1 + (changePct / 100) / 12 + (rnd() - 0.5) * 0.05; spark.push(+v.toFixed(4)); }
+    const f = flags.map(([k, label]) => ({ k, label }));
+    return {
+      address: fakeAddr(symbol + 'L'), name, symbol, launchedAt: ago(ageMin), ticker, volumeUsd, trades, traders, buyPct,
+      buys: Math.round(trades * buyPct / 100), sells: trades - Math.round(trades * buyPct / 100),
+      priceUsd: +(0.00002 * (i + 1) * (1 + changePct / 100)).toPrecision(4), changePct, spark, topWalletPct,
+      copycat: f.find((x) => x.k === 'copy') ? { of: f.find((x) => x.k === 'copy').label.split('$')[1], score: 90 } : null,
+      deployerLaunches: (f.find((x) => x.k === 'repeat') || { label: 'x1' }).label.split('x')[1] * 1,
+      flags: f,
+      risk: f.some((x) => x.k === 'copy' || x.k === 'wash') ? 'high' : f.length ? 'medium' : 'low'
+    };
+  });
+  return { source: 'sample', windowMin: 45, totalTrades: 1840, rows };
+}

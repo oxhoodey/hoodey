@@ -38,6 +38,9 @@ export const VARIABLES = [
   { group: 'Radar', name: 'SPIKE_LOOKBACK_HOURS', type: 'int', default: 6, public: true, desc: 'Default time window for the radar (1, 6 or 24 are offered in the UI).' },
   { group: 'Radar', name: 'RADAR_MAX_TOKENS', type: 'int', default: 12, desc: 'Most themed tokens listed per spike.' },
 
+  { group: 'Radar', name: 'TRENDING_TRADE_LIMIT', type: 'int', default: 3000, desc: 'How many of the latest Robinhood Chain trades to scan for the "Hot right now" board.' },
+  { group: 'Radar', name: 'TRENDING_MAX_ROWS', type: 'int', default: 20, desc: 'Most tokens shown on the "Hot right now" board.' },
+
   // ── Copycat Eye ──────────────────────────────────────────────────────
   { group: 'Copycat Eye', name: 'COPYCAT_NAME_THRESHOLD', type: 'float', default: 0.7, public: true, desc: 'Name similarity (0–1) above which a token is flagged as a copy.' },
   { group: 'Copycat Eye', name: 'COPYCAT_IMAGE_THRESHOLD', type: 'float', default: 0.8, public: true, desc: 'Image similarity (0–1) above which a token is flagged as a copy (used once image matching is enabled).' },
