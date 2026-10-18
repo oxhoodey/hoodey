@@ -49,7 +49,7 @@ Sample mode needs nothing. For real Robinhood Chain data:
 
 Any section that can't load live data falls back to sample data and is labelled, so the site never breaks. Open `/healthz` to see the mode and RPC block height.
 
-**Live data status.** Launches, name matching, narrative tagging, deployer history, hourly waves, family trees and gaps are computed from Bitquery and RPC. Holder counts, volume per token, survival stats, and image similarity still need an indexer and show "—" or sample numbers until it exists (see the roadmap). The Bitquery queries follow Bitquery's Robinhood Chain and Pons docs; check them against your plan and dataset before relying on them.
+**Live data status.** By default (`DATA_SOURCE=chain`) HoodEye needs no paid API. The server indexes Pons itself over `RH_RPC_URL`: factory launch events (token, curve, creator) and bonding-curve buy/sell events, kept in memory for `INDEX_KEEP_HOURS` (`INDEX_BACKFILL_HOURS` are read on start). Stock token prices and ETH/USD come from DexPaprika's free API. Gap Watch fills in once the server has recorded a price at a market close. Holder counts, survival stats and image similarity still show "—" or sample numbers (see the roadmap). `DATA_SOURCE=bitquery` switches back to the older Bitquery setup.
 
 ### Alerts on Telegram
 
@@ -74,31 +74,40 @@ Generated from `server/config.js` by `npm run env:example`. 🔒 = secret, never
 | `PUBLIC_URL` | _empty_ | Public address of the site, e.g. https://hoodeye.up.railway.app. Used for link previews. |
 | `LOG_LEVEL` | `info` | How much the server logs. Options: `debug`, `info`, `warn`, `error`. |
 | **Data** | | |
-| `DATA_MODE` | `sample` | sample = built-in demo data, no keys needed. live = read Robinhood Chain through Bitquery and RPC; any section that cannot load falls back to sample and says so. Options: `sample`, `live`. |
+| `DATA_MODE` | `sample` | sample = built-in demo data, no keys needed. live = read Robinhood Chain (see DATA_SOURCE); any section that cannot load falls back to sample and says so. Options: `sample`, `live`. |
+| `DATA_SOURCE` | `chain` | Where live data comes from. chain = HoodEye reads Pons launches and trades itself over RH_RPC_URL and takes prices from DexPaprika (free, no keys). bitquery = the older Bitquery setup (needs BITQUERY_API_KEY and uses its points). Options: `chain`, `bitquery`. |
 | `CACHE_TTL_SECONDS` | `30` | How long API answers are cached on the server. |
 | `REFRESH_INTERVAL_SECONDS` | `60` | How often open pages refresh their data. |
 | `REQUEST_TIMEOUT_MS` | `10000` | Timeout for calls to Bitquery and the RPC. |
 | **Robinhood Chain** | | |
 | `RH_CHAIN_ID` | `4663` | Robinhood Chain mainnet chain ID. |
-| `RH_RPC_URL` 🔒 | _empty_ | JSON-RPC endpoint for Robinhood Chain. Used to read token name and symbol in Copycat scans. |
+| `RH_RPC_URL` 🔒 | `https://rpc.mainnet.chain.robinhood.com` | JSON-RPC endpoint for Robinhood Chain. With DATA_SOURCE=chain every launch and trade is read through it, so a private endpoint (QuickNode, Alchemy, Chainstack…) is steadier than the public default. |
 | `RH_EXPLORER_URL` | _empty_ | Block explorer base URL. When set, addresses link to it (e.g. <url>/address/0x…). |
 | `PONS_TOKEN_URL` | `https://ponsfamily.com/launchpad/` | Token page on Pons. The token address is appended, so every token links to <url>0x…. Leave empty to hide the Pons links. |
-| `BITQUERY_API_KEY` 🔒 | _empty_ | Bitquery access token. Needed for live launches, trades and deployer history. |
+| `INDEX_BACKFILL_HOURS` | `6` | On start, how many hours of past launches and trades the chain indexer reads before going live. More hours = longer start and more RPC calls. |
+| `INDEX_KEEP_HOURS` | `24` | How many hours of launches and trades the indexer keeps in memory (deployer history, Copycat matches, launch clock). |
+| `INDEX_POLL_SECONDS` | `10` | How often the indexer reads new blocks. Lower = fresher data, more RPC calls. |
+| `INDEX_CHUNK_BLOCKS` | `10000` | Blocks per eth_getLogs call. Lower it if your RPC rejects large ranges. |
+| `DEXPAPRIKA_URL` | `https://api.dexpaprika.com` | DexPaprika API (free, no key). Gives stock token prices and ETH/USD. |
+| `DEXPAPRIKA_NETWORK` | `robinhood` | DexPaprika network id for Robinhood Chain. |
+| `PRICE_REFRESH_SECONDS` | `60` | How often stock token prices and ETH/USD are refreshed from DexPaprika. |
+| `BITQUERY_API_KEY` 🔒 | _empty_ | Bitquery access token. Only used when DATA_SOURCE=bitquery. |
 | `BITQUERY_ENDPOINT` | `https://streaming.bitquery.io/graphql` | Bitquery GraphQL endpoint. |
 | `BITQUERY_DATASET` | `realtime` | Bitquery dataset for EVM queries. realtime works on every plan; archive and combined reach further back but need the Robinhood archive add-on. Options: `realtime`, `archive`, `combined`. |
 | `PONS_FACTORY_ADDRESS` | `0x7ed598bcef8bd9edd8c97a195c6d13f40801ec7e` | Pons launch factory contract. |
 | `PONS_ROUTER_ADDRESS` | `0xe33e9e479df8802cb0866d5d05258bec4cf62948` | Pons router contract. |
-| `LIVE_CACHE_SECONDS` | `120` | How long launches and stock trades from Bitquery are reused before a background refresh. Raise it if Bitquery says "rate limit". |
+| `LIVE_CACHE_SECONDS` | `120` | DATA_SOURCE=bitquery only: how long Bitquery results are reused before a background refresh. |
 | `BITQUERY_MIN_INTERVAL_MS` | `1500` | Minimum gap between Bitquery requests. Raise it (e.g. 4000) on plans with a low requests-per-minute limit. |
-| `LAUNCH_LIMIT` | `300` | How many recent launches to pull per refresh in live mode. |
+| `LAUNCH_LIMIT` | `300` | DATA_SOURCE=bitquery only: how many recent launches to pull per refresh. |
 | **Radar** | | |
 | `STOCK_TOKENS` | `TSLA:Tesla:0x322F0929c4625eD5bAd873c95208D54E1c003b2d,NVDA:Nvidia:0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC,AAPL:Apple:0xaF3D76f1834A1d425780943C99Ea8A608f8a93f9,COIN:Coinbase:0x6330D8C3178a418788dF01a47479c0ce7CCF450b,MSTR:MicroStrategy:0xec262a75e413fAfD0dF80480274532C79D42da09,META:Meta:0xc0D6457C16Cc70d6790Dd43521C899C87ce02f35` | Stock tokens to watch, comma separated, as TICKER:Name:tokenAddress. The address is needed for live price moves. |
 | `STOCK_KEYWORDS` | `TSLA=tesla\|elon\|musk\|cyber\|tsla\|cybertruck;NVDA=nvidia\|nvda\|gpu\|jensen\|leather;AAPL=apple\|aapl\|iphone;COIN=coinbase\|armstrong;MSTR=microstrategy\|mstr\|saylor;META=zuck\|zuckerberg\|facebook;GME=gamestop\|gme\|stonk\|squeeze\|kitty` | Words that tie a memecoin to a stock. TICKER=word\|word;TICKER=word… |
 | `SPIKE_THRESHOLD_PCT` | `5` | A stock token move of at least this many percent counts as a spike. |
-| `SPIKE_MIN_TRADES` | `3` | Trades needed past the halfway price before a move counts as a spike. Stops a single odd trade in a thin market from triggering the radar. |
+| `SPIKE_MIN_TRADES` | `3` | Trades in the window needed before a move counts as a spike. Stops a single odd trade in a thin market from triggering the radar. |
 | `SPIKE_LOOKBACK_HOURS` | `6` | Default time window for the radar (1, 6 or 24 are offered in the UI). |
 | `RADAR_MAX_TOKENS` | `12` | Most themed tokens listed per spike. |
-| `TRENDING_TRADE_LIMIT` | `3000` | How many of the latest Robinhood Chain trades to scan for the "Hot right now" board. |
+| `TRENDING_WINDOW_MIN` | `60` | Minutes of Pons trades the "Hot right now" board ranks. |
+| `TRENDING_TRADE_LIMIT` | `3000` | DATA_SOURCE=bitquery only: how many of the latest trades to scan for the "Hot right now" board. |
 | `TRENDING_MAX_ROWS` | `20` | Most tokens shown on the "Hot right now" board. |
 | **Copycat Eye** | | |
 | `COPYCAT_NAME_THRESHOLD` | `0.7` | Name similarity (0–1) above which a token is flagged as a copy. |
@@ -166,7 +175,7 @@ Every data answer has `source: "live"` or `"sample"`; a fallback also includes `
 
 ```
 server/        index.js (HTTP + API), config.js (all env vars), data.js (live/sample switch),
-               live.js (Bitquery + RPC), sample.js (demo data), alerts.js (Telegram), util.js
+               live.js (chain indexer + DexPaprika), indexer.js, dexpaprika.js, live-bitquery.js (optional), sample.js (demo data), alerts.js (Telegram), util.js
 public/        radar, copycat, clock, family, roadmap pages + assets/ (CSS, JS, WebGL background)
 data/          roadmap.json
 scripts/       gen-env.js (.env.example + table above), check.js (pre-deploy check)

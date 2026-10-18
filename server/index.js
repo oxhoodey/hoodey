@@ -6,7 +6,6 @@ import { config, publicConfig } from './config.js';
 import { log, isAddress } from './util.js';
 import * as data from './data.js';
 import { startAlerts } from './alerts.js';
-import { startWarmer } from './live.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PUBLIC = path.join(ROOT, 'public');
@@ -168,7 +167,7 @@ const server = http.createServer(async (req, res) => {
   try {
     const p = url.pathname.replace(/\/+$/, '') || '/';
     if (p === '/healthz') {
-      return json(res, 200, { ok: true, mode: config.DATA_MODE, liveReady: config.liveReady, uptimeSec: Math.round((Date.now() - startedAt) / 1000), chain: await data.chainStatus().catch(() => ({})) });
+      return json(res, 200, { ok: true, mode: config.DATA_MODE, source: config.DATA_SOURCE, liveReady: config.liveReady, uptimeSec: Math.round((Date.now() - startedAt) / 1000), chain: await data.chainStatus().catch(() => ({})) });
     }
     if (p.startsWith('/api/')) return await api(req, res, url);
     if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method not allowed');
@@ -194,11 +193,11 @@ const server = http.createServer(async (req, res) => {
 });
 
 config.warnings.forEach((w) => log.warn(w));
-if (config.DATA_MODE === 'live' && !config.BITQUERY_API_KEY) log.warn('DATA_MODE=live but BITQUERY_API_KEY is empty: every section will show sample data.');
+if (config.DATA_MODE === 'live' && !config.liveReady) log.warn(`DATA_MODE=live but ${config.DATA_SOURCE === 'bitquery' ? 'BITQUERY_API_KEY' : 'RH_RPC_URL'} is empty: every section will show sample data.`);
 
 server.listen(config.PORT, '0.0.0.0', () => {
-  log.info(`${config.APP_NAME} listening on :${config.PORT} (data: ${config.DATA_MODE}${config.liveReady ? ', live ready' : ''})`);
-  if (config.DATA_MODE === 'live') startWarmer();
+  log.info(`${config.APP_NAME} listening on :${config.PORT} (data: ${config.DATA_MODE}/${config.DATA_SOURCE}${config.liveReady ? ', live ready' : ''})`);
+  if (config.DATA_MODE === 'live') data.startLive();
   startAlerts();
 });
 

@@ -1,0 +1,222 @@
+// Reads Pons launches and bonding-curve trades straight from Robinhood Chain over JSON-RPC.
+// No third-party indexer: the server follows new blocks and keeps a rolling window in memory.
+//
+// Events (verified on mainnet):
+//   Factory  Launch  0x8d4aad49…  topics: token, curve, creator
+//   Curve    Buy     0xec36bf57…  topics: sender, recipient   data: ethIn, tokensOut, fee, _
+//   Curve    Sell    0x8113d738…  topics: sender, recipient   data: tokensIn, ethOut, fee, _
+import { config } from './config.js';
+import { fetchJson, log, tagStock, isAddress } from './util.js';
+
+const T_LAUNCH = '0x8d4aad4953d0ca700d468f3753aa14432d1b35b43ec6409f051fb6aa43a89607';
+const T_BUY = '0xec36bf571f136799e8dc0b0b8bea4b04d8bd3d43de838aab0d5fc21d4cbfc455';
+const T_SELL = '0x8113d738abdcb6b38357e9d53a54a7157861a09031b453651f0fe7fe151f59df';
+const T_TRANSFER = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+
+const state = {
+  ready: false,
+  error: null,
+  head: 0, // last block fully indexed
+  startedFrom: 0,
+  startedAt: 0, // timestamp of the first indexed block
+  launches: new Map(), // token -> launch
+  curves: new Map(), // curve -> token
+  trades: [], // oldest first
+  lastPollAt: 0
+};
+
+let rpcId = 0;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+async function rpc(method, params, attempt = 0) {
+  try {
+    const body = await fetchJson(config.RH_RPC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: ++rpcId, method, params })
+    });
+    if (body.error) throw new Error('RPC: ' + (body.error.message || JSON.stringify(body.error)));
+    return body.result;
+  } catch (e) {
+    // Public endpoints rate-limit bursts: wait and try again a few times.
+    if (attempt < 4 && /429|rate|limit exceeded|too many requests|timeout|ECONNRESET|fetch failed/i.test(e.message) && !/range|results/i.test(e.message)) {
+      await sleep(1000 * 2 ** attempt);
+      return rpc(method, params, attempt + 1);
+    }
+    throw e;
+  }
+}
+
+const hex = (n) => '0x' + n.toString(16);
+const addr = (topic) => '0x' + topic.slice(26).toLowerCase();
+const word = (data, i) => BigInt('0x' + (data.slice(2 + i * 64, 2 + (i + 1) * 64) || '0'));
+const units = (v) => Number(v / 10n ** 9n) / 1e9; // 18 decimals -> float
+
+function decodeString(h) {
+  if (!h || h === '0x') return '';
+  const d = h.slice(2);
+  try {
+    if (d.length >= 128) {
+      const off = parseInt(d.slice(0, 64), 16) * 2;
+      const len = parseInt(d.slice(off, off + 64), 16);
+      return Buffer.from(d.slice(off + 64, off + 64 + len * 2), 'hex').toString('utf8').replace(/\0/g, '').trim();
+    }
+    return Buffer.from(d.slice(0, 64), 'hex').toString('utf8').replace(/\0/g, '').trim();
+  } catch { return ''; }
+}
+
+const metaCache = new Map();
+async function meta(token) {
+  if (metaCache.has(token)) return metaCache.get(token);
+  const [n, s] = await Promise.all([
+    rpc('eth_call', [{ to: token, data: '0x06fdde03' }, 'latest']).catch(() => '0x'),
+    rpc('eth_call', [{ to: token, data: '0x95d89b41' }, 'latest']).catch(() => '0x')
+  ]);
+  const m = { name: decodeString(n), symbol: decodeString(s) };
+  metaCache.set(token, m);
+  return m;
+}
+
+// Block times: logs on this chain carry no timestamp, so read the edges of each range and interpolate.
+const blockTimes = new Map();
+async function blockTime(n) {
+  if (blockTimes.has(n)) return blockTimes.get(n);
+  const b = await rpc('eth_getBlockByNumber', [hex(n), false]);
+  const t = parseInt(b.timestamp, 16) * 1000;
+  blockTimes.set(n, t);
+  if (blockTimes.size > 500) blockTimes.delete(blockTimes.keys().next().value);
+  return t;
+}
+
+// A curve we did not see launch (older than the backfill): its token is the one moving in or out of it in that transaction.
+async function curveToken(curve, blockNumber, txHash) {
+  if (state.curves.has(curve)) return state.curves.get(curve);
+  const logs = await rpc('eth_getLogs', [{ fromBlock: hex(blockNumber), toBlock: hex(blockNumber), topics: [T_TRANSFER] }]);
+  const pad = '0x' + curve.slice(2).padStart(64, '0');
+  const hit = logs.find((x) => x.transactionHash === txHash && (x.topics[1] === pad || x.topics[2] === pad));
+  const token = hit ? hit.address.toLowerCase() : null;
+  state.curves.set(curve, token);
+  return token;
+}
+
+async function indexRange(from, to) {
+  const [t0, t1, logs] = await Promise.all([
+    blockTime(from), blockTime(to),
+    rpc('eth_getLogs', [{ fromBlock: hex(from), toBlock: hex(to), topics: [[T_LAUNCH, T_BUY, T_SELL]] }])
+  ]);
+  const timeOf = (bn) => Math.round(to === from ? t1 : t0 + ((t1 - t0) * (bn - from)) / (to - from));
+  const factory = config.PONS_FACTORY_ADDRESS.toLowerCase();
+
+  // Launches first, so trades in the same range can find their curve.
+  for (const l of logs) {
+    if (l.topics[0] !== T_LAUNCH || l.address.toLowerCase() !== factory) continue;
+    const token = addr(l.topics[1]), curve = addr(l.topics[2]), creator = addr(l.topics[3]);
+    const bn = parseInt(l.blockNumber, 16);
+    const m = await meta(token).catch(() => ({ name: '', symbol: '' }));
+    state.curves.set(curve, token);
+    state.launches.set(token, { address: token, curve, creator, name: m.name || m.symbol, symbol: m.symbol, at: new Date(timeOf(bn)).toISOString(), t: timeOf(bn), block: bn, launchpad: 'Pons', ticker: tagStock(m.name, m.symbol) });
+  }
+
+  // A sell names its sender twice. Direct sells: that is the trader. Router sells: the trader is
+  // whoever sent tokens to the router in the same transaction, found with one batched transfer query.
+  const sells = logs.filter((l) => l.topics[0] === T_SELL);
+  const sellers = new Map();
+  const senders = [...new Set(sells.map((l) => l.topics[1]))];
+  for (let i = 0; i < senders.length; i += 50) {
+    const tl = await rpc('eth_getLogs', [{ fromBlock: hex(from), toBlock: hex(to), topics: [T_TRANSFER, null, senders.slice(i, i + 50)] }]).catch(() => []);
+    tl.forEach((x) => { if (x.topics[1] !== x.topics[2]) sellers.set(x.transactionHash + x.topics[2], addr(x.topics[1])); });
+  }
+
+  for (const l of logs) {
+    const buy = l.topics[0] === T_BUY;
+    if (!buy && l.topics[0] !== T_SELL) continue;
+    const curve = l.address.toLowerCase();
+    const bn = parseInt(l.blockNumber, 16);
+    const token = await curveToken(curve, bn, l.transactionHash).catch(() => null);
+    if (!token) continue;
+    const eth = units(word(l.data, buy ? 0 : 1));
+    const amount = units(word(l.data, buy ? 1 : 0));
+    if (!(eth > 0 && amount > 0)) continue;
+    const trader = buy ? addr(l.topics[2]) : (sellers.get(l.transactionHash + l.topics[1]) || addr(l.topics[1]));
+    state.trades.push({ t: timeOf(bn), block: bn, token, side: buy ? 'buy' : 'sell', eth, amount, priceEth: eth / amount, trader, tx: l.transactionHash });
+  }
+}
+
+function prune() {
+  const cutoff = Date.now() - config.INDEX_KEEP_HOURS * 3600e3;
+  if (state.trades.length && state.trades[0].t < cutoff) state.trades = state.trades.filter((x) => x.t >= cutoff);
+  for (const [k, l] of state.launches) if (l.t < cutoff) state.launches.delete(k);
+}
+
+async function catchUp() {
+  const latest = parseInt(await rpc('eth_blockNumber', []), 16);
+  if (!state.head) {
+    // Estimate how many blocks the backfill needs from the recent block rate.
+    const probe = Math.max(0, latest - 20000);
+    const [tNow, tProbe] = await Promise.all([blockTime(latest), blockTime(probe)]);
+    const perBlock = Math.max(1, tNow - tProbe) / (latest - probe);
+    const back = Math.round((config.INDEX_BACKFILL_HOURS * 3600e3) / perBlock);
+    state.head = Math.max(0, latest - back);
+    state.startedFrom = state.head;
+    state.startedAt = await blockTime(state.head);
+    log.info(`Indexer: backfilling ${config.INDEX_BACKFILL_HOURS}h (${back.toLocaleString('en-US')} blocks) from block ${state.head}`);
+  }
+  let span = config.INDEX_CHUNK_BLOCKS;
+  while (state.head < latest) {
+    const to = Math.min(latest, state.head + span);
+    try {
+      await indexRange(state.head + 1, to);
+    } catch (e) {
+      // Too many results or too wide a range for this RPC: retry the same blocks in smaller steps.
+      if (span > 200) { span = Math.floor(span / 2); log.debug(`Indexer: narrowing to ${span} blocks (${e.message.slice(0, 80)})`); continue; }
+      throw e;
+    }
+    state.head = to;
+    if (span < config.INDEX_CHUNK_BLOCKS) span = Math.min(config.INDEX_CHUNK_BLOCKS, span * 2);
+  }
+  state.trades.sort((a, b) => a.t - b.t);
+  prune();
+  state.lastPollAt = Date.now();
+  if (!state.ready) {
+    state.ready = true;
+    log.info(`Indexer ready: ${state.launches.size} launches, ${state.trades.length} trades, head ${state.head}`);
+  }
+}
+
+let running = false;
+export function startIndexer() {
+  if (!config.RH_RPC_URL) { state.error = 'RH_RPC_URL is not set'; log.warn('Indexer off: RH_RPC_URL is not set'); return; }
+  const tick = async () => {
+    if (running) return;
+    running = true;
+    try { await catchUp(); state.error = null; }
+    catch (e) { state.error = e.message; log.warn('Indexer:', e.message.slice(0, 160)); }
+    finally { running = false; }
+  };
+  tick();
+  setInterval(tick, config.INDEX_POLL_SECONDS * 1000).unref();
+}
+
+function need() {
+  if (!state.ready) throw new Error(state.error ? `Indexer: ${state.error}` : 'Indexer is still catching up with the chain');
+}
+
+// Newest first, like the old Bitquery list.
+export function launches() {
+  need();
+  return [...state.launches.values()].sort((a, b) => b.t - a.t);
+}
+
+export function trades(sinceMs = 0) {
+  need();
+  if (!sinceMs) return state.trades;
+  let lo = 0, hi = state.trades.length;
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (state.trades[mid].t < sinceMs) lo = mid + 1; else hi = mid; }
+  return state.trades.slice(lo);
+}
+
+export function status() {
+  return { ready: state.ready, head: state.head, launches: state.launches.size, trades: state.trades.length, since: state.startedAt ? new Date(state.startedAt).toISOString() : null, error: state.error };
+}
+
+export const isReady = () => state.ready;
+export { isAddress };

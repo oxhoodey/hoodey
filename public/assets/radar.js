@@ -402,7 +402,7 @@ if (cfg.features.walletWatch) {
       const shares = w.tslaShares != null ? html`Equal to <strong>${Math.abs(w.tslaShares)} shares of TSLA</strong> today.` : '';
       const spy = w.spyPct != null ? html` In SPY, the same money would be ${w.spyPct >= 0 ? 'up' : 'down'} ${Math.abs(w.spyPct)}%.` : '';
       $('wallet-out').innerHTML = html`<div style="display: flex; flex-direction: column; gap: 6px; padding-top: 10px; border-top: 1px solid #1E4A2C">
-        <span class="small" style="color: #CFE3D4">${w.address.slice(0, 6)}…${w.address.slice(-4)} · ${w.label.toLowerCase()} · last ${w.days} days${w.source !== 'live' ? ' · sample' : ''}</span>
+        <span class="small" style="color: #CFE3D4">${w.address.slice(0, 6)}…${w.address.slice(-4)} · ${w.label.toLowerCase()} · last ${w.window || w.days + ' days'}${w.source !== 'live' ? ' · sample' : ''}</span>
         <div style="font-weight: 700; font-size: 34px; letter-spacing: -0.03em; line-height: 1.1">${headline}</div>
         <p style="font-size: 14px">${raw(shares)}${raw(spy)}</p>
         ${raw(w.note ? html`<p class="small" style="color: #CFE3D4">${w.note}</p>` : '')}

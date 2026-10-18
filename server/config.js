@@ -12,34 +12,43 @@ export const VARIABLES = [
   { group: 'App', name: 'LOG_LEVEL', type: 'enum', options: ['debug', 'info', 'warn', 'error'], default: 'info', desc: 'How much the server logs.' },
 
   // ── Data ─────────────────────────────────────────────────────────────
-  { group: 'Data', name: 'DATA_MODE', type: 'enum', options: ['sample', 'live'], default: 'sample', public: true, desc: 'sample = built-in demo data, no keys needed. live = read Robinhood Chain through Bitquery and RPC; any section that cannot load falls back to sample and says so.' },
+  { group: 'Data', name: 'DATA_MODE', type: 'enum', options: ['sample', 'live'], default: 'sample', public: true, desc: 'sample = built-in demo data, no keys needed. live = read Robinhood Chain (see DATA_SOURCE); any section that cannot load falls back to sample and says so.' },
+  { group: 'Data', name: 'DATA_SOURCE', type: 'enum', options: ['chain', 'bitquery'], default: 'chain', desc: 'Where live data comes from. chain = HoodEye reads Pons launches and trades itself over RH_RPC_URL and takes prices from DexPaprika (free, no keys). bitquery = the older Bitquery setup (needs BITQUERY_API_KEY and uses its points).' },
   { group: 'Data', name: 'CACHE_TTL_SECONDS', type: 'int', default: 30, desc: 'How long API answers are cached on the server.' },
   { group: 'Data', name: 'REFRESH_INTERVAL_SECONDS', type: 'int', default: 60, public: true, desc: 'How often open pages refresh their data.' },
   { group: 'Data', name: 'REQUEST_TIMEOUT_MS', type: 'int', default: 10000, desc: 'Timeout for calls to Bitquery and the RPC.' },
 
   // ── Robinhood Chain ──────────────────────────────────────────────────
   { group: 'Robinhood Chain', name: 'RH_CHAIN_ID', type: 'int', default: 4663, public: true, desc: 'Robinhood Chain mainnet chain ID.' },
-  { group: 'Robinhood Chain', name: 'RH_RPC_URL', type: 'string', default: '', secret: true, desc: 'JSON-RPC endpoint for Robinhood Chain. Used to read token name and symbol in Copycat scans.' },
+  { group: 'Robinhood Chain', name: 'RH_RPC_URL', type: 'string', default: 'https://rpc.mainnet.chain.robinhood.com', secret: true, desc: 'JSON-RPC endpoint for Robinhood Chain. With DATA_SOURCE=chain every launch and trade is read through it, so a private endpoint (QuickNode, Alchemy, Chainstack…) is steadier than the public default.' },
   { group: 'Robinhood Chain', name: 'RH_EXPLORER_URL', type: 'string', default: '', public: true, desc: 'Block explorer base URL. When set, addresses link to it (e.g. <url>/address/0x…).' },
   { group: 'Robinhood Chain', name: 'PONS_TOKEN_URL', type: 'string', default: 'https://ponsfamily.com/launchpad/', public: true, desc: 'Token page on Pons. The token address is appended, so every token links to <url>0x…. Leave empty to hide the Pons links.' },
-  { group: 'Robinhood Chain', name: 'BITQUERY_API_KEY', type: 'string', default: '', secret: true, desc: 'Bitquery access token. Needed for live launches, trades and deployer history.' },
+  { group: 'Robinhood Chain', name: 'INDEX_BACKFILL_HOURS', type: 'int', default: 6, desc: 'On start, how many hours of past launches and trades the chain indexer reads before going live. More hours = longer start and more RPC calls.' },
+  { group: 'Robinhood Chain', name: 'INDEX_KEEP_HOURS', type: 'int', default: 24, desc: 'How many hours of launches and trades the indexer keeps in memory (deployer history, Copycat matches, launch clock).' },
+  { group: 'Robinhood Chain', name: 'INDEX_POLL_SECONDS', type: 'int', default: 10, desc: 'How often the indexer reads new blocks. Lower = fresher data, more RPC calls.' },
+  { group: 'Robinhood Chain', name: 'INDEX_CHUNK_BLOCKS', type: 'int', default: 10000, desc: 'Blocks per eth_getLogs call. Lower it if your RPC rejects large ranges.' },
+  { group: 'Robinhood Chain', name: 'DEXPAPRIKA_URL', type: 'string', default: 'https://api.dexpaprika.com', desc: 'DexPaprika API (free, no key). Gives stock token prices and ETH/USD.' },
+  { group: 'Robinhood Chain', name: 'DEXPAPRIKA_NETWORK', type: 'string', default: 'robinhood', desc: 'DexPaprika network id for Robinhood Chain.' },
+  { group: 'Robinhood Chain', name: 'PRICE_REFRESH_SECONDS', type: 'int', default: 60, desc: 'How often stock token prices and ETH/USD are refreshed from DexPaprika.' },
+  { group: 'Robinhood Chain', name: 'BITQUERY_API_KEY', type: 'string', default: '', secret: true, desc: 'Bitquery access token. Only used when DATA_SOURCE=bitquery.' },
   { group: 'Robinhood Chain', name: 'BITQUERY_ENDPOINT', type: 'string', default: 'https://streaming.bitquery.io/graphql', desc: 'Bitquery GraphQL endpoint.' },
   { group: 'Robinhood Chain', name: 'BITQUERY_DATASET', type: 'enum', options: ['realtime', 'archive', 'combined'], default: 'realtime', desc: 'Bitquery dataset for EVM queries. realtime works on every plan; archive and combined reach further back but need the Robinhood archive add-on.' },
   { group: 'Robinhood Chain', name: 'PONS_FACTORY_ADDRESS', type: 'string', default: '0x7ed598bcef8bd9edd8c97a195c6d13f40801ec7e', desc: 'Pons launch factory contract.' },
   { group: 'Robinhood Chain', name: 'PONS_ROUTER_ADDRESS', type: 'string', default: '0xe33e9e479df8802cb0866d5d05258bec4cf62948', desc: 'Pons router contract.' },
-  { group: 'Robinhood Chain', name: 'LIVE_CACHE_SECONDS', type: 'int', default: 120, desc: 'How long launches and stock trades from Bitquery are reused before a background refresh. Raise it if Bitquery says "rate limit".' },
+  { group: 'Robinhood Chain', name: 'LIVE_CACHE_SECONDS', type: 'int', default: 120, desc: 'DATA_SOURCE=bitquery only: how long Bitquery results are reused before a background refresh.' },
   { group: 'Robinhood Chain', name: 'BITQUERY_MIN_INTERVAL_MS', type: 'int', default: 1500, desc: 'Minimum gap between Bitquery requests. Raise it (e.g. 4000) on plans with a low requests-per-minute limit.' },
-  { group: 'Robinhood Chain', name: 'LAUNCH_LIMIT', type: 'int', default: 300, desc: 'How many recent launches to pull per refresh in live mode.' },
+  { group: 'Robinhood Chain', name: 'LAUNCH_LIMIT', type: 'int', default: 300, desc: 'DATA_SOURCE=bitquery only: how many recent launches to pull per refresh.' },
 
   // ── Radar ────────────────────────────────────────────────────────────
   { group: 'Radar', name: 'STOCK_TOKENS', type: 'string', default: 'TSLA:Tesla:0x322F0929c4625eD5bAd873c95208D54E1c003b2d,NVDA:Nvidia:0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC,AAPL:Apple:0xaF3D76f1834A1d425780943C99Ea8A608f8a93f9,COIN:Coinbase:0x6330D8C3178a418788dF01a47479c0ce7CCF450b,MSTR:MicroStrategy:0xec262a75e413fAfD0dF80480274532C79D42da09,META:Meta:0xc0D6457C16Cc70d6790Dd43521C899C87ce02f35', public: true, desc: 'Stock tokens to watch, comma separated, as TICKER:Name:tokenAddress. The address is needed for live price moves.' },
   { group: 'Radar', name: 'STOCK_KEYWORDS', type: 'string', default: 'TSLA=tesla|elon|musk|cyber|tsla|cybertruck;NVDA=nvidia|nvda|gpu|jensen|leather;AAPL=apple|aapl|iphone;COIN=coinbase|armstrong;MSTR=microstrategy|mstr|saylor;META=zuck|zuckerberg|facebook;GME=gamestop|gme|stonk|squeeze|kitty', desc: 'Words that tie a memecoin to a stock. TICKER=word|word;TICKER=word…' },
   { group: 'Radar', name: 'SPIKE_THRESHOLD_PCT', type: 'float', default: 5, public: true, desc: 'A stock token move of at least this many percent counts as a spike.' },
-  { group: 'Radar', name: 'SPIKE_MIN_TRADES', type: 'int', default: 3, desc: 'Trades needed past the halfway price before a move counts as a spike. Stops a single odd trade in a thin market from triggering the radar.' },
+  { group: 'Radar', name: 'SPIKE_MIN_TRADES', type: 'int', default: 3, desc: 'Trades in the window needed before a move counts as a spike. Stops a single odd trade in a thin market from triggering the radar.' },
   { group: 'Radar', name: 'SPIKE_LOOKBACK_HOURS', type: 'int', default: 6, public: true, desc: 'Default time window for the radar (1, 6 or 24 are offered in the UI).' },
   { group: 'Radar', name: 'RADAR_MAX_TOKENS', type: 'int', default: 12, desc: 'Most themed tokens listed per spike.' },
 
-  { group: 'Radar', name: 'TRENDING_TRADE_LIMIT', type: 'int', default: 3000, desc: 'How many of the latest Robinhood Chain trades to scan for the "Hot right now" board.' },
+  { group: 'Radar', name: 'TRENDING_WINDOW_MIN', type: 'int', default: 60, public: true, desc: 'Minutes of Pons trades the "Hot right now" board ranks.' },
+  { group: 'Radar', name: 'TRENDING_TRADE_LIMIT', type: 'int', default: 3000, desc: 'DATA_SOURCE=bitquery only: how many of the latest trades to scan for the "Hot right now" board.' },
   { group: 'Radar', name: 'TRENDING_MAX_ROWS', type: 'int', default: 20, desc: 'Most tokens shown on the "Hot right now" board.' },
 
   // ── Copycat Eye ──────────────────────────────────────────────────────
@@ -154,7 +163,7 @@ export const config = {
   keywords: parseKeywords(values.STOCK_KEYWORDS),
   holidays: String(values.MARKET_HOLIDAYS).split(',').map((s) => s.trim()).filter((s) => /^\d{4}-\d{2}-\d{2}$/.test(s)),
   corsOrigins: String(values.CORS_ORIGINS).split(',').map((s) => s.trim()).filter(Boolean),
-  liveReady: values.DATA_MODE === 'live' && !!values.BITQUERY_API_KEY,
+  liveReady: values.DATA_MODE === 'live' && (values.DATA_SOURCE === 'bitquery' ? !!values.BITQUERY_API_KEY : !!values.RH_RPC_URL),
   warnings
 };
 

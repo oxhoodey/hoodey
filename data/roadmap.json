@@ -41,7 +41,7 @@
     }
   ],
   "tracks": [
-    { "title": "Data", "points": ["Pons launches and stock token trades from Bitquery", "Direct RPC reads for token names and contracts", "Exchange calendar from settings"] },
+    { "title": "Data", "points": ["Own chain indexer for Pons launches and trades (RPC, no third-party keys)", "Stock token prices from DexPaprika", "Exchange calendar from settings"] },
     { "title": "Indexing", "points": ["Own store of tokens, deployers and holder snapshots", "Narrative tagging: which stock a meme is about", "Hourly history for lifespans and forecasts"] },
     { "title": "Models", "points": ["Name and image similarity for Copycat Eye", "Survival model behind life expectancy", "Rolling correlation between memes and stocks"] },
     { "title": "Delivery", "points": ["Read-only web app: no wallet connection, no signatures", "Telegram alerts and the opening bell brief", "Public API once the signals are stable"] }

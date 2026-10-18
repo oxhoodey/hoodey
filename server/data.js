@@ -2,7 +2,11 @@
 import { config } from './config.js';
 import { createCache, log } from './util.js';
 import * as sample from './sample.js';
-import * as live from './live.js';
+import * as chain from './live.js';
+import * as bq from './live-bitquery.js';
+
+const live = config.DATA_SOURCE === 'bitquery' ? bq : chain;
+export const startLive = () => live.startWarmer();
 
 const cached = createCache(config.CACHE_TTL_SECONDS);
 const useLive = () => config.DATA_MODE === 'live';
