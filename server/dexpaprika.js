@@ -24,7 +24,9 @@ const base = () => config.DEXPAPRIKA_URL.replace(/\/$/, '');
 // Token summary: price_usd plus per-window blocks ("1h", "6h", "24h", …) with volume_usd, buys, sells, txns, last_price_usd_change (%).
 export function tokenSummary(address, network = config.DEXPAPRIKA_NETWORK) {
   return cached(`dp:${network}:${address.toLowerCase()}`, config.PRICE_REFRESH_SECONDS * 1000, async () => {
-    const t = await fetchJson(`${base()}/networks/${network}/tokens/${address.toLowerCase()}`);
+    const raw = await fetchJson(`${base()}/networks/${network}/tokens/${address.toLowerCase()}`);
+    // Price and the per-window blocks live under "summary" (older answers had them at the top level).
+    const t = raw && raw.summary ? { ...raw.summary, symbol: raw.symbol, name: raw.name } : raw;
     if (!t || !(Number(t.price_usd) > 0)) throw new Error(`DexPaprika: no price for ${address}`);
     return t;
   });
