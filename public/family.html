@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{APP_NAME}} — Narrative Family Tree</title>
+<meta name="description" content="Which memecoin came first on a stock narrative, and which ones copied it.">
+<meta property="og:title" content="{{APP_NAME}} — Narrative Family Tree">
+<meta property="og:description" content="{{APP_TAGLINE}}">
+<meta property="og:url" content="{{CANONICAL}}">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/styles.css">
+{{THEME_STYLE}}
+</head>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+<div class="wrap">
+<header class="top"></header>
+<main style="display: contents">
+
+<section class="hero">
+  <div>
+    <span class="eyebrow">Narrative Family Tree</span>
+    <h1 class="display">Who came first. Who copied.</h1>
+  </div>
+  <div class="segmented" role="group" aria-label="Narrative" id="tabs"></div>
+</section>
+
+<div class="stats" id="stats"></div>
+
+<div class="split">
+  <section class="panel main" aria-label="Family tree" style="flex: 999 1 700px">
+    <div class="panel-head"><span class="small muted" style="letter-spacing: 0.08em; font-weight: 600">STOCK → ORIGINALS → CLONES</span><span class="src" id="src-tree" hidden></span></div>
+    <div class="tree-scroll"><div class="tree" id="tree"><div class="skel" style="min-height: 320px; width: 700px"></div></div></div>
+    <div class="legend" style="display: flex; flex-wrap: wrap; gap: 20px">
+      <span><i style="border-radius: 50%; background: var(--accent)"></i>Original, alive</span>
+      <span><i style="border-radius: 50%; border: 2px solid var(--accent); box-sizing: border-box"></i>Clone, alive</span>
+      <span><i style="border-radius: 50%; background: var(--faint)"></i>Dead</span>
+      <span><i style="width: 18px; height: 0; border-radius: 0; border-top: 2px dashed #9FB3A5"></i>Copied from</span>
+    </div>
+  </section>
+
+  <aside class="panel" id="detail" aria-label="Selected token" aria-live="polite" style="flex: 1 1 300px; gap: 18px"></aside>
+</div>
+
+</main>
+<footer class="foot"></footer>
+</div>
+<script type="module" src="/assets/family.js"></script>
+</body>
+</html>

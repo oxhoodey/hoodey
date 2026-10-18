@@ -1,0 +1,49 @@
+{
+  "phases": [
+    {
+      "name": "Now",
+      "tag": "live on the site",
+      "items": [
+        { "title": "Stock → Meme Radar", "desc": "Catch every meme that launches after a stock token moves.", "status": "Live" },
+        { "title": "Copycat Eye", "desc": "Match names against every older token and flag recycled deployers.", "status": "Live" },
+        { "title": "Market Clock", "desc": "Exchange sessions, overnight gaps and when meme waves start.", "status": "Live" },
+        { "title": "Narrative Family Tree", "desc": "See which token came first and which ones copied it.", "status": "Live" },
+        { "title": "Wallet Watch", "desc": "Paste any address to see its meme trading. Read-only, no connection.", "status": "Live" }
+      ]
+    },
+    {
+      "name": "Next",
+      "tag": "in development",
+      "items": [
+        { "title": "Copycat image matching", "desc": "Perceptual hashes of every logo, so recolored copies get caught too.", "status": "Building" },
+        { "title": "Earnings → Meme Forecast", "desc": "An event calendar with the meme wave each event usually brings.", "status": "Building" },
+        { "title": "Meme–Stock Correlation", "desc": "How closely a meme still tracks its stock. When the link breaks, so does the hype.", "status": "Building" },
+        { "title": "Sell Pressure Map", "desc": "Holder cost basis by price level: where supply sits in profit.", "status": "Building" }
+      ]
+    },
+    {
+      "name": "Later",
+      "tag": "designed, queued",
+      "items": [
+        { "title": "Eye Score cards", "desc": "A 0–100 score per token, as an image ready to post.", "status": "Planned" },
+        { "title": "Telegram & X bot", "desc": "Type /eye with a contract address and get the card back.", "status": "Planned" },
+        { "title": "Survival Game", "desc": "Guess which tokens survive six hours. Weekly leaderboard.", "status": "Planned" }
+      ]
+    },
+    {
+      "name": "Vision",
+      "tag": "exploring",
+      "items": [
+        { "title": "$HOODEYE holder tiers", "desc": "Faster alerts and early access. Proven with an optional one-time signed message, never a transaction.", "status": "Research" },
+        { "title": "Every launchpad", "desc": "Pons, Pools and whatever launches next on Robinhood Chain.", "status": "Research" },
+        { "title": "Public API", "desc": "HoodEye signals for bots, dashboards and other builders.", "status": "Research" }
+      ]
+    }
+  ],
+  "tracks": [
+    { "title": "Data", "points": ["Pons launches and stock token trades from Bitquery", "Direct RPC reads for token names and contracts", "Exchange calendar from settings"] },
+    { "title": "Indexing", "points": ["Own store of tokens, deployers and holder snapshots", "Narrative tagging: which stock a meme is about", "Hourly history for lifespans and forecasts"] },
+    { "title": "Models", "points": ["Name and image similarity for Copycat Eye", "Survival model behind life expectancy", "Rolling correlation between memes and stocks"] },
+    { "title": "Delivery", "points": ["Read-only web app: no wallet connection, no signatures", "Telegram alerts and the opening bell brief", "Public API once the signals are stable"] }
+  ]
+}

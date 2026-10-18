@@ -1,0 +1,175 @@
+// Every setting HoodEye uses lives here, read from environment variables.
+// On Railway, set them under the service's "Variables" tab.
+// This list is also the source for .env.example (run `npm run env:example`).
+
+export const VARIABLES = [
+  // ── App ──────────────────────────────────────────────────────────────
+  { group: 'App', name: 'PORT', type: 'int', default: 3000, desc: 'Port the server listens on. Railway sets this for you; leave it empty there.' },
+  { group: 'App', name: 'NODE_ENV', type: 'string', default: 'production', desc: 'production or development.' },
+  { group: 'App', name: 'APP_NAME', type: 'string', default: 'HoodEye', public: true, desc: 'Name shown in the header, page titles and alerts.' },
+  { group: 'App', name: 'APP_TAGLINE', type: 'string', default: 'Eyes on every meme, before the market blinks.', public: true, desc: 'Short line used in page descriptions and link previews.' },
+  { group: 'App', name: 'PUBLIC_URL', type: 'string', default: '', public: true, desc: 'Public address of the site, e.g. https://hoodeye.up.railway.app. Used for link previews.' },
+  { group: 'App', name: 'LOG_LEVEL', type: 'enum', options: ['debug', 'info', 'warn', 'error'], default: 'info', desc: 'How much the server logs.' },
+
+  // ── Data ─────────────────────────────────────────────────────────────
+  { group: 'Data', name: 'DATA_MODE', type: 'enum', options: ['sample', 'live'], default: 'sample', public: true, desc: 'sample = built-in demo data, no keys needed. live = read Robinhood Chain through Bitquery and RPC; any section that cannot load falls back to sample and says so.' },
+  { group: 'Data', name: 'CACHE_TTL_SECONDS', type: 'int', default: 30, desc: 'How long API answers are cached on the server.' },
+  { group: 'Data', name: 'REFRESH_INTERVAL_SECONDS', type: 'int', default: 60, public: true, desc: 'How often open pages refresh their data.' },
+  { group: 'Data', name: 'REQUEST_TIMEOUT_MS', type: 'int', default: 10000, desc: 'Timeout for calls to Bitquery and the RPC.' },
+
+  // ── Robinhood Chain ──────────────────────────────────────────────────
+  { group: 'Robinhood Chain', name: 'RH_CHAIN_ID', type: 'int', default: 4663, public: true, desc: 'Robinhood Chain mainnet chain ID.' },
+  { group: 'Robinhood Chain', name: 'RH_RPC_URL', type: 'string', default: '', secret: true, desc: 'JSON-RPC endpoint for Robinhood Chain. Used to read token name and symbol in Copycat scans.' },
+  { group: 'Robinhood Chain', name: 'RH_EXPLORER_URL', type: 'string', default: '', public: true, desc: 'Block explorer base URL. When set, addresses link to it (e.g. <url>/address/0x…).' },
+  { group: 'Robinhood Chain', name: 'BITQUERY_API_KEY', type: 'string', default: '', secret: true, desc: 'Bitquery access token. Needed for live launches, trades and deployer history.' },
+  { group: 'Robinhood Chain', name: 'BITQUERY_ENDPOINT', type: 'string', default: 'https://streaming.bitquery.io/graphql', desc: 'Bitquery GraphQL endpoint.' },
+  { group: 'Robinhood Chain', name: 'BITQUERY_DATASET', type: 'enum', options: ['realtime', 'archive', 'combined'], default: 'combined', desc: 'Bitquery dataset for EVM queries. archive and combined reach further back.' },
+  { group: 'Robinhood Chain', name: 'PONS_FACTORY_ADDRESS', type: 'string', default: '0x7ed598bcef8bd9edd8c97a195c6d13f40801ec7e', desc: 'Pons launch factory contract.' },
+  { group: 'Robinhood Chain', name: 'PONS_ROUTER_ADDRESS', type: 'string', default: '0xe33e9e479df8802cb0866d5d05258bec4cf62948', desc: 'Pons router contract.' },
+  { group: 'Robinhood Chain', name: 'LAUNCH_LIMIT', type: 'int', default: 300, desc: 'How many recent launches to pull per refresh in live mode.' },
+
+  // ── Radar ────────────────────────────────────────────────────────────
+  { group: 'Radar', name: 'STOCK_TOKENS', type: 'string', default: 'TSLA:Tesla:,NVDA:Nvidia:,COIN:Coinbase:,GME:GameStop:,AAPL:Apple:', public: true, desc: 'Stock tokens to watch, comma separated, as TICKER:Name:tokenAddress. The address is needed for live price moves.' },
+  { group: 'Radar', name: 'STOCK_KEYWORDS', type: 'string', default: 'TSLA=tesla|elon|musk|cyber|rocket|tsla|giga;NVDA=nvidia|nvda|gpu|chip|jensen|leather;COIN=coinbase|coin|base|armstrong;GME=gamestop|gme|stonk|squeeze|diamond|ape|kitty;AAPL=apple|aapl|iphone|tim', desc: 'Words that tie a memecoin to a stock. TICKER=word|word;TICKER=word…' },
+  { group: 'Radar', name: 'SPIKE_THRESHOLD_PCT', type: 'float', default: 5, public: true, desc: 'A stock token move of at least this many percent counts as a spike.' },
+  { group: 'Radar', name: 'SPIKE_LOOKBACK_HOURS', type: 'int', default: 6, public: true, desc: 'Default time window for the radar (1, 6 or 24 are offered in the UI).' },
+  { group: 'Radar', name: 'RADAR_MAX_TOKENS', type: 'int', default: 12, desc: 'Most themed tokens listed per spike.' },
+
+  // ── Copycat Eye ──────────────────────────────────────────────────────
+  { group: 'Copycat Eye', name: 'COPYCAT_NAME_THRESHOLD', type: 'float', default: 0.7, public: true, desc: 'Name similarity (0–1) above which a token is flagged as a copy.' },
+  { group: 'Copycat Eye', name: 'COPYCAT_IMAGE_THRESHOLD', type: 'float', default: 0.8, public: true, desc: 'Image similarity (0–1) above which a token is flagged as a copy (used once image matching is enabled).' },
+  { group: 'Copycat Eye', name: 'IPFS_GATEWAY', type: 'string', default: 'https://ipfs.io/ipfs/', public: true, desc: 'Gateway used to show token logos stored on IPFS.' },
+
+  // ── Market Clock ─────────────────────────────────────────────────────
+  { group: 'Market Clock', name: 'MARKET_TIMEZONE', type: 'string', default: 'America/New_York', public: true, desc: 'Time zone of the exchange.' },
+  { group: 'Market Clock', name: 'MARKET_PREMARKET_OPEN', type: 'time', default: '04:00', public: true, desc: 'Pre-market start, HH:MM in exchange time.' },
+  { group: 'Market Clock', name: 'MARKET_OPEN', type: 'time', default: '09:30', public: true, desc: 'Regular session open.' },
+  { group: 'Market Clock', name: 'MARKET_CLOSE', type: 'time', default: '16:00', public: true, desc: 'Regular session close.' },
+  { group: 'Market Clock', name: 'MARKET_AFTERHOURS_CLOSE', type: 'time', default: '20:00', public: true, desc: 'After-hours end.' },
+  { group: 'Market Clock', name: 'MARKET_HOLIDAYS', type: 'string', default: '2026-11-26,2026-12-25,2027-01-01,2027-01-18,2027-02-15,2027-03-26,2027-05-31,2027-06-18,2027-07-05,2027-09-06,2027-11-25,2027-12-24', public: true, desc: 'Full-day exchange holidays, YYYY-MM-DD, comma separated. Check the exchange calendar each year.' },
+
+  // ── Alerts (Telegram) ────────────────────────────────────────────────
+  { group: 'Alerts', name: 'TELEGRAM_BOT_USERNAME', type: 'string', default: '', public: true, desc: 'Bot or channel username without @. The "Get alerts" button opens t.me/<this>.' },
+  { group: 'Alerts', name: 'TELEGRAM_BOT_TOKEN', type: 'string', default: '', secret: true, desc: 'Bot token from @BotFather. Needed only for the server to post alerts.' },
+  { group: 'Alerts', name: 'TELEGRAM_CHAT_ID', type: 'string', default: '', desc: 'Channel or group ID the server posts alerts to, e.g. @hoodeye_alerts or -100…' },
+  { group: 'Alerts', name: 'ALERTS_ENABLED', type: 'bool', default: false, desc: 'Post spike alerts to Telegram.' },
+  { group: 'Alerts', name: 'ALERT_MIN_MOVE_PCT', type: 'float', default: 5, desc: 'Only alert on stock moves of at least this many percent.' },
+  { group: 'Alerts', name: 'OPENING_BELL_BRIEF_ENABLED', type: 'bool', default: false, desc: 'Post a brief to Telegram before the regular session opens.' },
+  { group: 'Alerts', name: 'OPENING_BELL_MINUTES_BEFORE', type: 'int', default: 30, public: true, desc: 'Minutes before the open to post the brief.' },
+
+  // ── Links ────────────────────────────────────────────────────────────
+  { group: 'Links', name: 'LINK_X', type: 'string', default: '', public: true, desc: 'X (Twitter) profile URL.' },
+  { group: 'Links', name: 'LINK_TELEGRAM', type: 'string', default: '', public: true, desc: 'Telegram community URL.' },
+  { group: 'Links', name: 'LINK_DOCS', type: 'string', default: '', public: true, desc: 'Docs URL.' },
+  { group: 'Links', name: 'ROADMAP_VOTE_URL', type: 'string', default: '', public: true, desc: 'Where the "Vote on the roadmap" button goes. Hidden when empty.' },
+  { group: 'Links', name: 'TOKEN_CONTRACT_ADDRESS', type: 'string', default: '', public: true, desc: '$HOODEYE contract address, shown in the footer when set.' },
+  { group: 'Links', name: 'TOKEN_BUY_URL', type: 'string', default: '', public: true, desc: 'Link to buy $HOODEYE, shown in the footer when set.' },
+
+  // ── Theme ────────────────────────────────────────────────────────────
+  { group: 'Theme', name: 'THEME_ACCENT', type: 'color', default: '#00C805', public: true, desc: 'Main accent color (buttons, gauges, bars).' },
+  { group: 'Theme', name: 'THEME_ACCENT_INK', type: 'color', default: '#078A33', public: true, desc: 'Darker accent used for text and chart lines on white.' },
+  { group: 'Theme', name: 'THEME_BG', type: 'color', default: '#F3F8F4', public: true, desc: 'Page background.' },
+  { group: 'Theme', name: 'BG_ANIMATION_ENABLED', type: 'bool', default: true, public: true, desc: 'Animated 3D dot field behind the pages.' },
+
+  // ── Features ─────────────────────────────────────────────────────────
+  { group: 'Features', name: 'FEATURE_RADAR', type: 'bool', default: true, public: true, desc: 'Show Stock → Meme Radar.' },
+  { group: 'Features', name: 'FEATURE_COPYCAT', type: 'bool', default: true, public: true, desc: 'Show Copycat Eye.' },
+  { group: 'Features', name: 'FEATURE_CLOCK', type: 'bool', default: true, public: true, desc: 'Show Market Clock.' },
+  { group: 'Features', name: 'FEATURE_FAMILY', type: 'bool', default: true, public: true, desc: 'Show Narrative Family Tree.' },
+  { group: 'Features', name: 'FEATURE_ROADMAP', type: 'bool', default: true, public: true, desc: 'Show Roadmap.' },
+  { group: 'Features', name: 'FEATURE_WALLET_WATCH', type: 'bool', default: true, public: true, desc: 'Show the Wallet Watch box on the radar.' },
+
+  // ── Security ─────────────────────────────────────────────────────────
+  { group: 'Security', name: 'RATE_LIMIT_PER_MINUTE', type: 'int', default: 120, desc: 'API requests allowed per visitor IP per minute.' },
+  { group: 'Security', name: 'CORS_ORIGINS', type: 'string', default: '', desc: 'Other sites allowed to call the API, comma separated. Empty = same site only.' },
+  { group: 'Security', name: 'TRUST_PROXY', type: 'bool', default: true, desc: 'Read the visitor IP from X-Forwarded-For (correct behind Railway).' }
+];
+
+// Returns [ok, value]. ok=false means the variable was set but could not be read.
+function parse(v) {
+  const raw = process.env[v.name];
+  if (raw === undefined || raw === '') return [true, v.default];
+  const s = String(raw).trim();
+  switch (v.type) {
+    case 'int': { const n = Number(s); return Number.isInteger(n) ? [true, n] : [false, v.default]; }
+    case 'float': { const n = Number(s); return Number.isFinite(n) ? [true, n] : [false, v.default]; }
+    case 'bool': {
+      const l = s.toLowerCase();
+      if (['1', 'true', 'yes', 'on'].includes(l)) return [true, true];
+      if (['0', 'false', 'no', 'off'].includes(l)) return [true, false];
+      return [false, v.default];
+    }
+    case 'enum': return v.options.includes(s) ? [true, s] : [false, v.default];
+    case 'color': return /^#[0-9a-fA-F]{3,8}$/.test(s) ? [true, s] : [false, v.default];
+    case 'time': return /^([01]?\d|2[0-3]):[0-5]\d$/.test(s) ? [true, s] : [false, v.default];
+    default: return [true, s];
+  }
+}
+
+function loadValues() {
+  const values = {};
+  const warnings = [];
+  for (const v of VARIABLES) {
+    const [ok, value] = parse(v);
+    if (!ok) warnings.push(`${v.name}="${process.env[v.name]}" is not a valid ${v.type}${v.options ? ' (' + v.options.join('|') + ')' : ''}; using default ${JSON.stringify(v.default)}`);
+    values[v.name] = value;
+  }
+  return { values, warnings };
+}
+
+function parseStocks(str) {
+  return String(str || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((s) => {
+      const [ticker, name, address] = s.split(':').map((x) => (x || '').trim());
+      return { ticker: ticker.toUpperCase(), name: name || ticker.toUpperCase(), address: /^0x[0-9a-fA-F]{40}$/.test(address || '') ? address.toLowerCase() : '' };
+    })
+    .filter((s) => s.ticker);
+}
+
+function parseKeywords(str) {
+  const out = {};
+  String(str || '').split(';').forEach((part) => {
+    const [t, words] = part.split('=');
+    if (!t || !words) return;
+    out[t.trim().toUpperCase()] = words.split('|').map((w) => w.trim().toLowerCase()).filter(Boolean);
+  });
+  return out;
+}
+
+const { values, warnings } = loadValues();
+
+export const config = {
+  ...values,
+  stocks: parseStocks(values.STOCK_TOKENS),
+  keywords: parseKeywords(values.STOCK_KEYWORDS),
+  holidays: String(values.MARKET_HOLIDAYS).split(',').map((s) => s.trim()).filter((s) => /^\d{4}-\d{2}-\d{2}$/.test(s)),
+  corsOrigins: String(values.CORS_ORIGINS).split(',').map((s) => s.trim()).filter(Boolean),
+  liveReady: values.DATA_MODE === 'live' && !!values.BITQUERY_API_KEY,
+  warnings
+};
+
+// Everything the browser is allowed to see. Secrets are never included.
+export function publicConfig() {
+  const pub = {};
+  for (const v of VARIABLES) {
+    if (v.public && !v.secret) pub[v.name] = config[v.name];
+  }
+  return {
+    ...pub,
+    stocks: config.stocks.map((s) => ({ ticker: s.ticker, name: s.name })),
+    holidays: config.holidays,
+    features: {
+      radar: config.FEATURE_RADAR,
+      copycat: config.FEATURE_COPYCAT,
+      clock: config.FEATURE_CLOCK,
+      family: config.FEATURE_FAMILY,
+      roadmap: config.FEATURE_ROADMAP,
+      walletWatch: config.FEATURE_WALLET_WATCH
+    },
+    alertsUrl: config.TELEGRAM_BOT_USERNAME ? `https://t.me/${config.TELEGRAM_BOT_USERNAME.replace(/^@/, '')}` : (config.LINK_TELEGRAM || ''),
+    liveReady: config.liveReady
+  };
+}

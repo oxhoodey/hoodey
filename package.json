@@ -1,0 +1,18 @@
+{
+  "name": "hoodeye",
+  "version": "0.1.0",
+  "description": "Read-only memecoin intelligence for Robinhood Chain: Stock → Meme Radar, Copycat Eye, Market Clock, Narrative Family Tree.",
+  "private": true,
+  "type": "module",
+  "main": "server/index.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "NODE_ENV=development LOG_LEVEL=debug node --watch server/index.js",
+    "check": "node scripts/check.js",
+    "env:example": "node scripts/gen-env.js"
+  },
+  "license": "MIT"
+}

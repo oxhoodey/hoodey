@@ -1,0 +1,328 @@
+// Live data from Robinhood Chain, through Bitquery (launches, trades) and JSON-RPC (token name/symbol).
+// Each function throws on failure; data.js catches and falls back to sample for that section only.
+import { config } from './config.js';
+import { fetchJson, log, nameSimilarity, tagStock, zonedParts, toMinutes, median, isAddress } from './util.js';
+
+async function bitquery(query, variables = {}) {
+  if (!config.BITQUERY_API_KEY) throw new Error('BITQUERY_API_KEY is not set');
+  const body = await fetchJson(config.BITQUERY_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.BITQUERY_API_KEY}` },
+    body: JSON.stringify({ query, variables })
+  });
+  if (body.errors && body.errors.length) throw new Error('Bitquery: ' + body.errors.map((e) => e.message).join('; ').slice(0, 400));
+  return body.data;
+}
+
+async function rpc(method, params) {
+  if (!config.RH_RPC_URL) throw new Error('RH_RPC_URL is not set');
+  const body = await fetchJson(config.RH_RPC_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params })
+  });
+  if (body.error) throw new Error('RPC: ' + body.error.message);
+  return body.result;
+}
+
+function decodeAbiString(hex) {
+  if (!hex || hex === '0x') return '';
+  const data = hex.slice(2);
+  try {
+    if (data.length >= 128) {
+      const offset = parseInt(data.slice(0, 64), 16) * 2;
+      const len = parseInt(data.slice(offset, offset + 64), 16);
+      const bytes = data.slice(offset + 64, offset + 64 + len * 2);
+      return Buffer.from(bytes, 'hex').toString('utf8').replace(/\0/g, '').trim();
+    }
+    return Buffer.from(data.slice(0, 64), 'hex').toString('utf8').replace(/\0/g, '').trim(); // bytes32 tokens
+  } catch {
+    return '';
+  }
+}
+
+export async function tokenMeta(address) {
+  const [code, nameHex, symbolHex] = await Promise.all([
+    rpc('eth_getCode', [address, 'latest']),
+    rpc('eth_call', [{ to: address, data: '0x06fdde03' }, 'latest']).catch(() => '0x'),
+    rpc('eth_call', [{ to: address, data: '0x95d89b41' }, 'latest']).catch(() => '0x')
+  ]);
+  if (!code || code === '0x') throw new Error('No contract at this address');
+  return { name: decodeAbiString(nameHex), symbol: decodeAbiString(symbolHex) };
+}
+
+export async function chainStatus() {
+  const out = {};
+  if (config.RH_RPC_URL) {
+    try { out.block = parseInt(await rpc('eth_blockNumber', []), 16); } catch (e) { out.rpcError = e.message; }
+  }
+  return out;
+}
+
+// Recent Pons launches (Bitquery "Transfers" mint pattern from the Pons API docs).
+const LAUNCHES_Q = `
+query Launches($limit: Int!, $contracts: [String!]) {
+  EVM(network: robinhood, dataset: ${config.BITQUERY_DATASET}) {
+    Transfers(
+      limit: {count: $limit}
+      orderBy: {descending: Block_Time}
+      where: {
+        Transfer: { Sender: {is: "0x0000000000000000000000000000000000000000"}, Amount: {eq: "1000000000"} }
+        Transaction: { To: {in: $contracts} }
+      }
+    ) {
+      Block { Time }
+      Transaction { Hash From }
+      Transfer { Receiver Currency { Name Symbol SmartContract } }
+    }
+  }
+}`;
+
+export async function launches() {
+  const data = await bitquery(LAUNCHES_Q, { limit: config.LAUNCH_LIMIT, contracts: [config.PONS_FACTORY_ADDRESS, config.PONS_ROUTER_ADDRESS] });
+  const rows = (data && data.EVM && data.EVM.Transfers) || [];
+  return rows.map((r) => {
+    const c = r.Transfer.Currency || {};
+    const name = c.Name || c.Symbol || '';
+    const symbol = c.Symbol || '';
+    return {
+      address: String(c.SmartContract || '').toLowerCase(),
+      name, symbol,
+      creator: String(r.Transaction.From || '').toLowerCase(),
+      at: r.Block.Time,
+      launchpad: 'Pons',
+      ticker: tagStock(name, symbol)
+    };
+  }).filter((l) => isAddress(l.address));
+}
+
+const TRADES_Q = `
+query StockTrades($token: String!, $limit: Int!) {
+  Trading {
+    Trades(
+      limit: {count: $limit}
+      orderBy: {descending: Block_Time}
+      where: { Pair: { Token: {Address: {is: $token}}, Market: {Network: {is: "Robinhood"}} } }
+    ) {
+      Block { Time }
+      PriceInUsd
+    }
+  }
+}`;
+
+async function stockTrades(address) {
+  const data = await bitquery(TRADES_Q, { token: address, limit: 1000 });
+  return ((data && data.Trading && data.Trading.Trades) || [])
+    .map((t) => ({ t: Date.parse(t.Block.Time), p: Number(t.PriceInUsd) }))
+    .filter((x) => Number.isFinite(x.t) && x.p > 0)
+    .sort((a, b) => a.t - b.t);
+}
+
+function bucketSeries(trades, from, to, points = 41) {
+  const out = [];
+  let i = 0, last = trades.length ? trades[0].p : 0;
+  for (let k = 0; k < points; k++) {
+    const edge = from + ((to - from) * k) / (points - 1);
+    while (i < trades.length && trades[i].t <= edge) { last = trades[i].p; i++; }
+    out.push(+last.toFixed(4));
+  }
+  return out;
+}
+
+function similarOlder(token, pool) {
+  let best = null;
+  for (const o of pool) {
+    if (o.address === token.address || Date.parse(o.at) >= Date.parse(token.at)) continue;
+    const s = Math.max(nameSimilarity(token.name, o.name), nameSimilarity(token.symbol, o.symbol));
+    if (!best || s > best.score) best = { of: o.symbol, score: s, older: o };
+  }
+  return best && best.score >= config.COPYCAT_NAME_THRESHOLD ? best : null;
+}
+
+export async function radar(rangeHours) {
+  const now = Date.now();
+  const from = now - rangeHours * 3600e3;
+  const all = await launches();
+  const creatorCounts = {};
+  all.forEach((l) => { creatorCounts[l.creator] = (creatorCounts[l.creator] || 0) + 1; });
+
+  const watched = config.stocks.filter((s) => s.address);
+  const events = [];
+  const errors = [];
+  for (const s of watched) {
+    try {
+      const tr = (await stockTrades(s.address)).filter((x) => x.t >= from - 3600e3);
+      const inRange = tr.filter((x) => x.t >= from);
+      if (inRange.length < 2) continue;
+      const before = tr.filter((x) => x.t < from).pop() || inRange[0];
+      const lastP = inRange[inRange.length - 1].p;
+      const movePct = ((lastP - before.p) / before.p) * 100;
+      if (Math.abs(movePct) < config.SPIKE_THRESHOLD_PCT) continue;
+      const half = before.p + (lastP - before.p) / 2;
+      const cross = inRange.find((x) => (movePct > 0 ? x.p >= half : x.p <= half)) || inRange[0];
+      const themed = all.filter((l) => l.ticker === s.ticker && Date.parse(l.at) >= cross.t).sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+      events.push({
+        ticker: s.ticker, name: s.name, up: movePct >= 0, movePct: +movePct.toFixed(1), trigger: `${movePct >= 0 ? 'Up' : 'Down'} ${Math.abs(movePct).toFixed(1)}% in ${rangeHours}h`,
+        at: new Date(cross.t).toISOString(), spikePos: (cross.t - from) / (now - from), series: bucketSeries(tr, from, now),
+        launches: themed.length, firstAfterMin: themed.length ? Math.round((Date.parse(themed[0].at) - cross.t) / 60000) : null,
+        volumeUsd: null, alivePct: null,
+        tokens: themed.slice(0, config.RADAR_MAX_TOKENS).map((l) => {
+          const copy = similarOlder(l, all);
+          const repeat = creatorCounts[l.creator] || 0;
+          return {
+            name: l.name, symbol: l.symbol, address: l.address, afterMin: Math.round((Date.parse(l.at) - cross.t) / 60000), launchpad: l.launchpad,
+            holders: null, volumeUsd: null, top10Pct: null,
+            copycat: copy ? { of: copy.of, score: Math.round(copy.score * 100) } : null,
+            lifespanMin: null,
+            risk: copy || repeat >= 5 ? 'high' : repeat >= 2 ? 'medium' : 'low'
+          };
+        })
+      });
+    } catch (e) {
+      errors.push(`${s.ticker}: ${e.message}`);
+    }
+  }
+  if (!watched.length) throw new Error('No stock token addresses in STOCK_TOKENS');
+  if (errors.length === watched.length) throw new Error(errors.join(' | '));
+  events.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+
+  const dayAgo = now - 24 * 3600e3;
+  const counts = {};
+  all.filter((l) => l.ticker && Date.parse(l.at) >= dayAgo).forEach((l) => { counts[l.ticker] = (counts[l.ticker] || 0) + 1; });
+  const hot = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([ticker, count]) => ({ ticker, count }));
+
+  return { source: 'live', events, hot: { source: 'live', items: hot }, errors };
+}
+
+export async function copycat(address) {
+  const all = await launches();
+  let token = address ? all.find((l) => l.address === address.toLowerCase()) : all[0];
+  if (!token && address) {
+    const meta = await tokenMeta(address);
+    token = { address: address.toLowerCase(), name: meta.name, symbol: meta.symbol, creator: '', at: new Date().toISOString(), launchpad: 'Unknown' };
+  }
+  if (!token) throw new Error('No launches found');
+
+  const scored = all
+    .filter((o) => o.address !== token.address && Date.parse(o.at) <= Date.parse(token.at))
+    .map((o) => ({ o, score: Math.max(nameSimilarity(token.name, o.name), nameSimilarity(token.symbol, o.symbol)) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5);
+  const top = scored[0];
+  const byCreator = token.creator ? all.filter((l) => l.creator === token.creator) : [];
+
+  return {
+    source: 'live',
+    token: {
+      name: token.name, symbol: token.symbol, address: token.address, launchpad: token.launchpad, launchedAt: token.at,
+      imageSimilarity: null,
+      nameSimilarity: top ? +top.score.toFixed(2) : 0,
+      closest: top ? { symbol: top.o.symbol, name: top.o.name, launchedAgo: null, diedAfter: null, sameDeployer: !!token.creator && top.o.creator === token.creator } : null,
+      flagged: !!top && top.score >= config.COPYCAT_NAME_THRESHOLD
+    },
+    matches: scored.map(({ o, score }) => ({ name: o.name, symbol: o.symbol, score: Math.round(score * 100), note: o.creator === token.creator ? 'same deployer' : 'different deployer', alive: null, life: null })),
+    scanned: all.length,
+    deployer: token.creator ? {
+      address: token.creator,
+      tokens30d: byCreator.filter((l) => Date.parse(l.at) > Date.now() - 30 * 86400e3).length,
+      deadWithin6h: null, imagesReused: null, medianLifespanMin: null,
+      pattern: byCreator.length >= 5 ? 'farm' : byCreator.length >= 2 ? 'repeat' : 'new',
+      history: byCreator.filter((l) => l.address !== token.address).slice(0, 8).map((l) => ({ symbol: l.symbol, alive: null, life: null, at: l.at }))
+    } : null
+  };
+}
+
+export async function clockHours() {
+  const all = await launches();
+  const counts = Array(24).fill(0);
+  let oldest = Date.now();
+  all.filter((l) => l.ticker).forEach((l) => {
+    const d = new Date(l.at);
+    counts[zonedParts(d).hour]++;
+    oldest = Math.min(oldest, d.getTime());
+  });
+  if (!counts.some(Boolean)) throw new Error('No stock-themed launches in the fetched window');
+  return { source: 'live', counts, days: Math.max(1, Math.round((Date.now() - oldest) / 86400e3)) };
+}
+
+export async function clockGaps() {
+  const watched = config.stocks.filter((s) => s.address);
+  if (!watched.length) throw new Error('No stock token addresses in STOCK_TOKENS');
+  const closeMin = toMinutes(config.MARKET_CLOSE);
+  const items = [];
+  for (const s of watched) {
+    const tr = await stockTrades(s.address);
+    if (!tr.length) continue;
+    // last trade at or before the most recent regular-session close
+    let closeTrade = null;
+    for (let i = tr.length - 1; i >= 0; i--) {
+      const z = zonedParts(new Date(tr[i].t));
+      const tradingDay = z.weekday >= 1 && z.weekday <= 5 && !config.holidays.includes(z.date);
+      if (tradingDay && z.hour * 60 + z.minute <= closeMin && tr[i].t < Date.now() - 60e3) { closeTrade = tr[i]; break; }
+    }
+    if (!closeTrade) continue;
+    const last = tr[tr.length - 1].p;
+    items.push({ ticker: s.ticker, price: +last.toFixed(2), gapPct: +(((last - closeTrade.p) / closeTrade.p) * 100).toFixed(1) });
+  }
+  if (!items.length) throw new Error('Not enough trade history for gaps');
+  return { source: 'live', items };
+}
+
+export async function family(ticker) {
+  const all = await launches();
+  const stocks = [...new Set(all.map((l) => l.ticker).filter(Boolean))];
+  const t = stocks.includes(ticker) ? ticker : stocks[0];
+  if (!t) throw new Error('No stock-themed launches found');
+  const stock = config.stocks.find((s) => s.ticker === t) || { ticker: t, name: t };
+  const fam = all.filter((l) => l.ticker === t).sort((a, b) => Date.parse(a.at) - Date.parse(b.at)).slice(-40);
+  const nodes = [{ id: 'r', parent: null, name: stock.name, symbol: t, kind: 'stock', alive: true, note: `${fam.length} themed launches`, deployer: '', similarity: null }];
+  const placed = [];
+  fam.forEach((l, i) => {
+    let best = null;
+    for (const p of placed) {
+      const s = Math.max(nameSimilarity(l.name, p.l.name), nameSimilarity(l.symbol, p.l.symbol));
+      if (s >= config.COPYCAT_NAME_THRESHOLD && (!best || s > best.s)) best = { s, p };
+    }
+    const id = 'n' + i;
+    nodes.push({
+      id, parent: best ? best.p.id : 'r', name: l.name, symbol: l.symbol, kind: best ? 'clone' : 'original', alive: null,
+      note: new Date(l.at).toISOString(), deployer: l.creator ? `${l.creator.slice(0, 6)}…${l.creator.slice(-4)}` : '',
+      similarity: best ? Math.round(best.s * 100) : null, at: l.at
+    });
+    placed.push({ id, l });
+  });
+  return { source: 'live', stocks, ticker: t, nodes };
+}
+
+const WALLET_Q = `
+query WalletTrades($trader: String!, $since: DateTime!) {
+  Trading {
+    Trades(
+      limit: {count: 2000}
+      where: { Trader: {Address: {is: $trader}}, Block: {Time: {since: $since}}, Pair: {Market: {Network: {is: "Robinhood"}}} }
+    ) {
+      Side
+      AmountsInUsd { Quote }
+    }
+  }
+}`;
+
+export async function wallet(address) {
+  const since = new Date(Date.now() - 7 * 86400e3).toISOString();
+  const data = await bitquery(WALLET_Q, { trader: address.toLowerCase(), since });
+  const rows = (data && data.Trading && data.Trading.Trades) || [];
+  let buys = 0, sells = 0;
+  rows.forEach((r) => {
+    const usd = Number(r.AmountsInUsd && r.AmountsInUsd.Quote) || 0;
+    if (String(r.Side).toLowerCase() === 'sell') sells += usd; else buys += usd;
+  });
+  const netUsd = Math.round(sells - buys);
+  let tslaShares = null;
+  const tsla = config.stocks.find((s) => s.ticker === 'TSLA' && s.address);
+  if (tsla) {
+    try { const tr = await stockTrades(tsla.address); if (tr.length) tslaShares = +(netUsd / tr[tr.length - 1].p).toFixed(1); } catch (e) { log.debug('tsla price', e.message); }
+  }
+  return { source: 'live', address: address.toLowerCase(), days: 7, label: 'Net trade flow', netEth: null, netUsd, tslaShares, spyPct: null, trades: rows.length };
+}
+
+export { median };

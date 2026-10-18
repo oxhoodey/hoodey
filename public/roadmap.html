@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{APP_NAME}} — Roadmap</title>
+<meta name="description" content="What is live, what we are building next, and where the project is heading.">
+<meta property="og:title" content="{{APP_NAME}} — Roadmap">
+<meta property="og:description" content="{{APP_TAGLINE}}">
+<meta property="og:url" content="{{CANONICAL}}">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/styles.css">
+{{THEME_STYLE}}
+</head>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+<div class="wrap">
+<header class="top"></header>
+<main style="display: contents">
+
+<section class="hero">
+  <div>
+    <span class="eyebrow">Roadmap · Dev plan</span>
+    <h1 class="display">Built in the open, one eye at a time.</h1>
+    <p class="lede">What is live today, what we are building next, and where {{APP_NAME}} is heading.</p>
+  </div>
+</section>
+
+<section class="progress" aria-hidden="true">
+  <div class="rail"></div><div class="done"></div>
+  <div class="steps" id="steps"></div>
+</section>
+
+<section class="phases" id="phases" aria-label="Roadmap phases"><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div></section>
+
+<section class="panel" aria-label="Dev plan">
+  <div style="display: flex; flex-direction: column; gap: 2px">
+    <h2 style="font-size: 20px; font-weight: 700">How we build it</h2>
+    <span class="small muted">Four tracks run in parallel. Each roadmap item lands as a slice through all four.</span>
+  </div>
+  <div class="tracks" id="tracks"></div>
+</section>
+
+<section class="panel dark" id="vote" style="flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 24px" hidden>
+  <div style="display: flex; flex-direction: column; gap: 4px; max-width: 680px">
+    <h2 style="font-size: 18px; font-weight: 700">Want a feature sooner?</h2>
+    <p style="font-size: 14px; color: #CFE3D4">Vote on what we build next.</p>
+  </div>
+  <a class="btn btn-lg btn-primary" id="vote-link" target="_blank" rel="noopener">Vote on the roadmap</a>
+</section>
+
+<p class="note">The roadmap is a plan, not a promise. Order and scope may change as we learn.</p>
+
+</main>
+<footer class="foot"></footer>
+</div>
+<script type="module" src="/assets/roadmap.js"></script>
+</body>
+</html>

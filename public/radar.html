@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{APP_NAME}} — Stock → Meme Radar</title>
+<meta name="description" content="{{APP_TAGLINE}}">
+<meta property="og:title" content="{{APP_NAME}} — Stock → Meme Radar">
+<meta property="og:description" content="{{APP_TAGLINE}}">
+<meta property="og:url" content="{{CANONICAL}}">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/styles.css">
+{{THEME_STYLE}}
+</head>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+<div class="wrap">
+<header class="top"></header>
+<main style="display: contents">
+
+<section class="hero">
+  <div>
+    <span class="eyebrow">Stock → Meme Radar · Robinhood Chain</span>
+    <h1 class="display">Stocks move. Memes follow.</h1>
+  </div>
+  <div class="segmented" role="group" aria-label="Time range" id="range">
+    <button type="button" data-h="1">1h</button>
+    <button type="button" data-h="6">6h</button>
+    <button type="button" data-h="24">24h</button>
+  </div>
+</section>
+
+<section aria-label="Latest stock moves">
+  <div class="panel-head" style="margin-bottom: 14px"><span class="small muted" id="cards-note"></span><span class="src" id="src-events" hidden></span></div>
+  <div class="cards" id="cards"><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
+</section>
+
+<div class="split">
+  <section class="panel main" id="detail" aria-label="Move details" aria-live="polite"><div class="skel" style="min-height: 420px"></div></section>
+
+  <aside class="side">
+    <section class="panel panel-sm">
+      <div class="panel-head"><h2 class="h2">Hottest narratives · 24h</h2><span class="src" id="src-hot" hidden></span></div>
+      <div id="hot" style="display: flex; flex-direction: column; gap: 18px"></div>
+    </section>
+
+    <section class="panel panel-sm">
+      <div class="panel-head"><h2 class="h2">Life expectancy</h2><span class="src" id="src-life" hidden></span></div>
+      <div id="life"></div>
+    </section>
+
+    <section class="panel panel-sm" id="alerts-card" hidden>
+      <h2 class="h2">Spike alerts on Telegram</h2>
+      <p class="small muted">Get a message when a stock token moves and the first themed meme appears. No account, no wallet.</p>
+      <a class="btn btn-primary" id="alerts-link" target="_blank" rel="noopener">Open Telegram</a>
+    </section>
+
+    <section class="panel panel-sm dark" id="wallet-card" hidden>
+      <h2 class="eyebrow" style="color: var(--accent)">Reality Mirror · Wallet Watch</h2>
+      <form id="wallet-form" novalidate style="display: flex; flex-direction: column; gap: 10px">
+        <label for="wallet-addr" style="font-size: 13px; color: #CFE3D4">Paste any wallet address</label>
+        <div class="field-dark">
+          <input id="wallet-addr" name="address" type="text" inputmode="text" autocomplete="off" spellcheck="false" placeholder="0x…">
+          <button class="btn btn-primary" type="submit" style="min-height: 44px; padding: 0 16px; border-radius: 12px; box-shadow: none">Mirror</button>
+        </div>
+        <span class="form-error" id="wallet-error" role="alert"></span>
+      </form>
+      <div id="wallet-out" aria-live="polite"></div>
+      <p class="small" style="color: #CFE3D4">Read-only lookup. Works for any address: yours, a KOL's or a whale's.</p>
+    </section>
+  </aside>
+</div>
+
+</main>
+<footer class="foot"></footer>
+</div>
+<script type="module" src="/assets/radar.js"></script>
+</body>
+</html>
