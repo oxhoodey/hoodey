@@ -82,6 +82,7 @@ Generated from `server/config.js` by `npm run env:example`. 🔒 = secret, never
 | `RH_CHAIN_ID` | `4663` | Robinhood Chain mainnet chain ID. |
 | `RH_RPC_URL` 🔒 | _empty_ | JSON-RPC endpoint for Robinhood Chain. Used to read token name and symbol in Copycat scans. |
 | `RH_EXPLORER_URL` | _empty_ | Block explorer base URL. When set, addresses link to it (e.g. <url>/address/0x…). |
+| `PONS_TOKEN_URL` | `https://ponsfamily.com/launchpad/` | Token page on Pons. The token address is appended, so every token links to <url>0x…. Leave empty to hide the Pons links. |
 | `BITQUERY_API_KEY` 🔒 | _empty_ | Bitquery access token. Needed for live launches, trades and deployer history. |
 | `BITQUERY_ENDPOINT` | `https://streaming.bitquery.io/graphql` | Bitquery GraphQL endpoint. |
 | `BITQUERY_DATASET` | `realtime` | Bitquery dataset for EVM queries. realtime works on every plan; archive and combined reach further back but need the Robinhood archive add-on. Options: `realtime`, `archive`, `combined`. |

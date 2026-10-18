@@ -21,6 +21,7 @@ export const VARIABLES = [
   { group: 'Robinhood Chain', name: 'RH_CHAIN_ID', type: 'int', default: 4663, public: true, desc: 'Robinhood Chain mainnet chain ID.' },
   { group: 'Robinhood Chain', name: 'RH_RPC_URL', type: 'string', default: '', secret: true, desc: 'JSON-RPC endpoint for Robinhood Chain. Used to read token name and symbol in Copycat scans.' },
   { group: 'Robinhood Chain', name: 'RH_EXPLORER_URL', type: 'string', default: '', public: true, desc: 'Block explorer base URL. When set, addresses link to it (e.g. <url>/address/0x…).' },
+  { group: 'Robinhood Chain', name: 'PONS_TOKEN_URL', type: 'string', default: 'https://ponsfamily.com/launchpad/', public: true, desc: 'Token page on Pons. The token address is appended, so every token links to <url>0x…. Leave empty to hide the Pons links.' },
   { group: 'Robinhood Chain', name: 'BITQUERY_API_KEY', type: 'string', default: '', secret: true, desc: 'Bitquery access token. Needed for live launches, trades and deployer history.' },
   { group: 'Robinhood Chain', name: 'BITQUERY_ENDPOINT', type: 'string', default: 'https://streaming.bitquery.io/graphql', desc: 'Bitquery GraphQL endpoint.' },
   { group: 'Robinhood Chain', name: 'BITQUERY_DATASET', type: 'enum', options: ['realtime', 'archive', 'combined'], default: 'realtime', desc: 'Bitquery dataset for EVM queries. realtime works on every plan; archive and combined reach further back but need the Robinhood archive add-on.' },

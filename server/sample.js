@@ -99,7 +99,7 @@ function copyToken(t) {
   return {
     source: 'sample',
     token: { name: t.name, symbol: t.symbol, address: t.address, launchpad: t.launchpad, launchedAt: t.launchedAt, imageSimilarity: t.imageSimilarity, nameSimilarity: t.nameSimilarity, closest: t.closest, flagged: t.imageSimilarity >= config.COPYCAT_IMAGE_THRESHOLD || t.nameSimilarity >= config.COPYCAT_NAME_THRESHOLD },
-    matches: t.matches.map(([name, symbol, score, note, alive, life]) => ({ name, symbol, score, note, alive, life })),
+    matches: t.matches.map(([name, symbol, score, note, alive, life]) => ({ name, symbol, address: fakeAddr(symbol + 'M'), score, note, alive, life })),
     scanned: 18402,
     deployer: DEPLOYER
   };

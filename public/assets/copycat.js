@@ -1,4 +1,4 @@
-import { initPage, api, html, raw, esc, fmtDuration, timeAgo, short, sourceBadge, isAddress, explorerLink } from './common.js';
+import { initPage, api, html, raw, esc, fmtDuration, timeAgo, short, sourceBadge, isAddress, explorerLink, ponsLink } from './common.js';
 
 const cfg = await initPage('copycat');
 const $ = (id) => document.getElementById(id);
@@ -34,7 +34,7 @@ function render(d) {
     return html`<div class="match">
       ${raw(thumb(52, m.alive === false))}
       <div style="display: flex; flex-direction: column; gap: 10px; min-width: 0">
-        <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline"><span style="font-weight: 600">${m.name}</span><span class="small muted">$${m.symbol} · ${m.note}</span></div>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline"><span style="font-weight: 600">${m.name}</span><span class="small muted">$${m.symbol} · ${m.note}</span>${raw(ponsLink(cfg, m.address))}</div>
         <div class="bar thin"><div class="fill" style="width: ${raw(w)}%; background: ${raw(color)}"></div><span class="knob" style="left: ${raw(w)}%"></span></div>
       </div>
       <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px"><span style="font-weight: 700; font-size: 22px">${m.score}%</span>${raw(fate(m.alive, m.life))}</div>
@@ -55,6 +55,7 @@ function render(d) {
           <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
             <span style="font-weight: 700; font-size: 26px; letter-spacing: -0.02em; overflow-wrap: anywhere">${t.name || 'Unnamed token'}</span>
             <span class="small muted">$${t.symbol || '?'} · ${raw(explorerLink(cfg, t.address))}</span>
+            ${raw(ponsLink(cfg, t.address, 'Open on Pons', 'pons-btn'))}
           </div>
         </div>
         <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: center">

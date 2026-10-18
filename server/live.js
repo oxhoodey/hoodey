@@ -414,7 +414,7 @@ export async function copycat(address) {
       closest: top ? { symbol: top.o.symbol, name: top.o.name, launchedAgo: null, diedAfter: null, sameDeployer: !!token.creator && top.o.creator === token.creator } : null,
       flagged: !!top && top.score >= config.COPYCAT_NAME_THRESHOLD
     },
-    matches: scored.map(({ o, score }) => ({ name: o.name, symbol: o.symbol, score: Math.round(score * 100), note: o.creator === token.creator ? 'same deployer' : 'different deployer', alive: null, life: null })),
+    matches: scored.map(({ o, score }) => ({ name: o.name, symbol: o.symbol, address: o.address, score: Math.round(score * 100), note: o.creator === token.creator ? 'same deployer' : 'different deployer', alive: null, life: null })),
     scanned: all.length,
     deployer: token.creator ? {
       address: token.creator,

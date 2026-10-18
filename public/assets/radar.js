@@ -1,4 +1,4 @@
-import { initPage, api, html, raw, esc, fmtInt, fmtUsd, fmtPct, fmtDuration, timeAgo, sourceBadge, every, isAddress, explorerLink } from './common.js';
+import { initPage, api, html, raw, esc, fmtInt, fmtUsd, fmtPct, fmtDuration, timeAgo, sourceBadge, every, isAddress, explorerLink, ponsLink } from './common.js';
 
 const cfg = await initPage('radar');
 const state = { range: [1, 6, 24].includes(cfg.SPIKE_LOOKBACK_HOURS) ? cfg.SPIKE_LOOKBACK_HOURS : 6, ticker: null, data: null };
@@ -58,7 +58,7 @@ function renderDetail(d) {
       <span class="dot"></span><span class="chip ${raw(i === 0 ? 'chip-accent' : 'chip-raised')}">${t.afterMin == null ? timeAgo(t.at) : '+' + t.afterMin + 'm'} · ${t.symbol}</span></div>`).join('') : '';
 
   const rows = toks.map((t) => html`<div class="trow" role="row">
-      <span role="cell" class="tok"><span class="av">${(t.symbol || '?').slice(0, 2)}</span><span><span class="nm">${t.name}</span><span class="sy">${raw(explorerLink(cfg, t.address, '$' + (t.symbol || '')))}</span></span></span>
+      <span role="cell" class="tok"><span class="av">${(t.symbol || '?').slice(0, 2)}</span><span><span class="nm">${t.name}</span><span class="sy">${raw(explorerLink(cfg, t.address, '$' + (t.symbol || '')))} ${raw(ponsLink(cfg, t.address))}</span></span></span>
       <span role="cell" class="muted">${t.afterMin == null ? timeAgo(t.at).replace(' ago', '') : '+' + t.afterMin + 'm'}</span>
       <span role="cell" class="muted">${t.launchpad}</span>
       <span role="cell">${fmtInt(t.holders)}</span>
@@ -254,18 +254,19 @@ function renderTicker(latest) {
 }
 
 function renderFeed(latest) {
-  const head = '<div class="feed-row head" role="row"><span role="columnheader">TOKEN</span><span role="columnheader">LAUNCHED</span><span role="columnheader">NARRATIVE</span><span role="columnheader">COPYCAT</span><span role="columnheader">DEPLOYER</span><span role="columnheader">RISK</span></div>';
+  const head = '<div class="feed-row head" role="row"><span role="columnheader">TOKEN</span><span role="columnheader">LAUNCHED</span><span role="columnheader">NARRATIVE</span><span role="columnheader">COPYCAT</span><span role="columnheader">DEPLOYER</span><span role="columnheader">RISK</span><span role="columnheader">TRADE</span></div>';
   const rows = (latest || []).map((t) => {
     const fresh = !seen.has(t.address) && seen.size > 0;
     seen.add(t.address);
-    return html`<a class="feed-row${raw(fresh ? ' new' : '')}" role="row" href="/copycat?address=${t.address}">
+    return html`<div class="feed-row${raw(fresh ? ' new' : '')}" role="row" tabindex="0" data-href="/copycat?address=${t.address}">
       <span role="cell" class="tok"><span class="av">${(t.symbol || '?').slice(0, 2)}</span><span><span class="nm">${t.name}</span><span class="sy">$${t.symbol} · ${t.launchpad}</span></span></span>
       <span role="cell" class="muted">${timeAgo(t.at)}</span>
       <span role="cell">${raw(t.ticker ? `<span class="chip chip-accent">${esc(t.ticker)}</span>` : '<span class="muted">—</span>')}</span>
       <span role="cell" style="font-size: 12px; ${raw(t.copycat ? 'font-weight: 600; color: var(--danger)' : 'color: var(--muted)')}">${t.copycat ? `Like $${t.copycat.of} ${t.copycat.score}%` : 'Original'}</span>
       <span role="cell" class="muted">${t.deployerLaunches > 1 ? `${t.deployerLaunches} launches` : 'First seen'}</span>
       <span role="cell"><span class="risk ${t.risk}">${t.risk ? t.risk[0].toUpperCase() + t.risk.slice(1) : '—'}</span></span>
-    </a>`;
+      <span role="cell">${raw(ponsLink(cfg, t.address, 'Pons', 'pons-btn sm'))}</span>
+    </div>`;
   }).join('');
   if (!(latest || []).length) seen.add('_');
   $('feed-rows').innerHTML = head + (rows || '<div class="empty">No launches seen yet.</div>');
@@ -315,12 +316,12 @@ function renderHot() {
     !(F.fresh && !(r.launchedAt && Date.now() - Date.parse(r.launchedAt) < 3600e3)) && !(F.stock && !r.ticker));
   const by = { volume: (r) => r.volumeUsd, traders: (r) => r.traders, momentum: (r) => r.changePct ?? -1e9, buy: (r) => r.buyPct ?? -1, new: (r) => (r.launchedAt ? Date.parse(r.launchedAt) : 0) }[hot.sort];
   rows = [...rows].sort((a, b) => by(b) - by(a));
-  const head = '<div class="hot-row head" role="row"><span role="columnheader">#</span><span role="columnheader">TOKEN</span><span role="columnheader">PRICE · CHANGE</span><span role="columnheader">VOLUME</span><span role="columnheader">TRADES</span><span role="columnheader">TRADERS</span><span role="columnheader">BUY PRESSURE</span><span role="columnheader">TOP WALLET</span><span role="columnheader">FLAGS</span><span></span></div>';
+  const head = '<div class="hot-row head" role="row"><span role="columnheader">#</span><span role="columnheader">TOKEN</span><span role="columnheader">PRICE · CHANGE</span><span role="columnheader">VOLUME</span><span role="columnheader">TRADES</span><span role="columnheader">TRADERS</span><span role="columnheader">BUY PRESSURE</span><span role="columnheader">TOP WALLET</span><span role="columnheader">FLAGS</span><span role="columnheader">TRADE</span></div>';
   const body = rows.map((r, i) => {
     const up = (r.changePct ?? 0) >= 0;
     const flags = r.flags.length ? r.flags.map((f) => `<span class="flag-c ${esc(f.k)}">${esc(f.label)}</span>`).join('') : '<span class="flag-c clean">No red flags</span>';
     const bp = r.buyPct == null ? '<span class="muted">—</span>' : `<div class="bp"><div class="bp-track"><span style="width: ${r.buyPct}%"></span></div><small>${r.buyPct}% buys · ${r.buys}/${r.sells}</small></div>`;
-    return html`<a class="hot-row" role="row" href="/copycat?address=${r.address}">
+    return html`<div class="hot-row" role="row" tabindex="0" data-href="/copycat?address=${r.address}">
       <span role="cell" class="rank${raw(i < 3 ? ' top' : '')}">${i + 1}</span>
       <span role="cell" class="tok"><span class="av">${(r.symbol || '?').slice(0, 2)}</span><span><span class="nm">${r.name || r.symbol}</span><span class="sy">$${r.symbol}${r.ticker ? ' · ' + r.ticker : ''}${r.launchedAt ? ' · ' + timeAgo(r.launchedAt).replace(' ago', ' old') : ''}</span></span></span>
       <span role="cell" class="chg"><span style="display: flex; flex-direction: column; gap: 2px"><span style="color: ${raw(r.changePct == null ? 'var(--muted)' : up ? 'var(--accent-ink)' : 'var(--down)')}">${r.changePct == null ? '—' : fmtPct(r.changePct)}</span><small class="muted" style="font-weight: 500">${fmtPrice(r.priceUsd)}</small></span>${raw(spark(r.spark, up))}</span>
@@ -330,8 +331,8 @@ function renderHot() {
       <span role="cell">${raw(bp)}</span>
       <span role="cell" style="${raw(r.topWalletPct >= 50 ? 'color: var(--danger); font-weight: 700' : '')}">${r.topWalletPct == null ? '—' : r.topWalletPct + '%'}</span>
       <span role="cell" class="flagset">${raw(flags)}</span>
-      <span class="go" aria-hidden="true">›</span>
-    </a>`;
+      <span role="cell">${raw(ponsLink(cfg, r.address, 'Pons', 'pons-btn sm'))}</span>
+    </div>`;
   }).join('');
   $('hot-rows').innerHTML = head + (body || `<div class="empty">No token passes these filters right now. Turn a filter off to see more.</div>`);
 }
@@ -339,6 +340,13 @@ function renderHot() {
 async function loadHot() {
   try { hot.data = await api('/api/trending'); renderHot(); }
   catch (err) { $('hot-rows').innerHTML = html`<div class="empty">Couldn't load the board: ${err.message}</div>`; }
+}
+// Rows open Copycat Eye; the Pons button inside opens ponsfamily.com instead.
+for (const id of ['hot-rows', 'feed-rows']) {
+  const box = $(id);
+  const go = (e) => { const row = e.target.closest('[data-href]'); if (row && !e.target.closest('a')) location.href = row.dataset.href; };
+  box.addEventListener('click', go);
+  box.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(e); });
 }
 $('hot-sort').addEventListener('click', (e) => { const b = e.target.closest('button[data-s]'); if (!b) return; hot.sort = b.dataset.s; saveHot(); renderHot(); });
 $('hot-filters').addEventListener('click', (e) => { const b = e.target.closest('button[data-f]'); if (!b) return; hot.filters[b.dataset.f] = !hot.filters[b.dataset.f]; saveHot(); renderHot(); });

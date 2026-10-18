@@ -76,6 +76,17 @@ export function explorerLink(cfg, address, text) {
   return `<a href="${esc(cfg.RH_EXPLORER_URL.replace(/\/$/, ''))}/address/${esc(address)}" target="_blank" rel="noopener">${label}</a>`;
 }
 
+// Link to the token's page on the Pons launchpad (PONS_TOKEN_URL + address).
+export function ponsUrl(cfg, address) {
+  if (!cfg.PONS_TOKEN_URL || !isAddress(address)) return '';
+  return cfg.PONS_TOKEN_URL.replace(/\/?$/, '/') + address;
+}
+export function ponsLink(cfg, address, label = 'Pons', cls = 'pons-link') {
+  const u = ponsUrl(cfg, address);
+  if (!u) return '';
+  return `<a class="${esc(cls)}" href="${esc(u)}" target="_blank" rel="noopener" title="Open on ponsfamily.com">${esc(label)}<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M4 2h6v6M10 2 3 9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></a>`;
+}
+
 // Small label shown on a section whenever its numbers are demo data.
 export function sourceBadge(el, part) {
   if (!el) return;
