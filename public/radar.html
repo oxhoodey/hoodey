@@ -37,27 +37,20 @@
       <a class="btn btn-lg" href="/copycat">Scan a token</a>
     </div>
   </div>
-  <div class="scope-wrap">
-    <div class="scope" aria-label="Radar of the latest launches" role="img" id="scope-box">
-      <div class="scope-face" id="scope">
-        <svg class="grid" viewBox="0 0 100 100" aria-hidden="true">
-          <g fill="none" stroke="#1F5A33" stroke-width="0.3">
-            <circle cx="50" cy="50" r="16"/><circle cx="50" cy="50" r="30"/><circle cx="50" cy="50" r="44"/>
-            <line x1="50" y1="2" x2="50" y2="98"/><line x1="2" y1="50" x2="98" y2="50"/>
-            <line x1="16" y1="16" x2="84" y2="84" stroke-dasharray="0.8 1.6"/><line x1="84" y1="16" x2="16" y2="84" stroke-dasharray="0.8 1.6"/>
-          </g>
-          <g fill="#3E8F57" font-size="2.4" font-family="ui-monospace, monospace">
-            <text x="51" y="35.5">15m</text><text x="51" y="21.5">30m</text><text x="51" y="7.5">60m</text>
-          </g>
-        </svg>
-        <div class="sweep" aria-hidden="true"></div>
-        <div id="blips"></div>
-        <div class="scope-eye" aria-hidden="true"><svg width="40" height="40" viewBox="0 0 64 64"><circle cx="32" cy="32" r="23" fill="none" stroke="#1E6B3A" stroke-width="2"/><circle cx="32" cy="32" r="16" style="fill: var(--accent)"/><circle cx="32" cy="32" r="7" fill="#0B1F14"/><circle cx="35.5" cy="28.5" r="2.4" fill="#fff"/></svg></div>
-        <span class="scope-label" style="left: 50%; top: 9%; transform: translateX(-50%)">SCANNING PONS</span>
-        <span class="scope-label" style="left: 50%; bottom: 8%; transform: translateX(-50%)" id="targets">— TARGETS</span>
+  <div class="eye-wrap">
+    <div class="eye-stage" id="eye-stage" aria-label="The HoodEye watching the latest Pons launches" role="img">
+      <div id="orbit"></div>
+      <div class="big-eye" aria-hidden="true">
+        <div class="sclera" id="sclera">
+          <svg class="iris" id="iris" viewBox="-20 -20 430.85 430.85"><path fill="#0B1F14" d="M348.15,216.78c0,96.14-77.93,174.07-174.07,174.07C77.93,390.85,0,312.92,0,216.78S77.93,42.7,174.07,42.7v43.86c-71.93,0-130.22,58.29-130.22,130.22c0,71.93,58.29,130.22,130.22,130.22c71.93,0,130.22-58.29,130.22-130.22H348.15z"/><path style="fill: var(--accent)" d="M390.85,216.78h-42.7c0-96.14-77.93-174.07-174.07-174.07V0C293.79,0,390.85,97.06,390.85,216.78z"/><path style="fill: var(--accent)" d="M254.75,216.78c0,44.57-36.14,80.67-80.68,80.67c-44.57,0-80.67-36.1-80.67-80.67c0-44.53,36.1-80.67,80.67-80.67v80.67H254.75z"/></svg>
+          <div class="lid top" id="lid-top"></div><div class="lid bottom" id="lid-bot"></div>
+        </div>
       </div>
     </div>
-    <div class="readout" aria-live="off"><span class="tag">CONTACT</span><span class="txt" id="readout">Acquiring signal</span><span class="cursor" aria-hidden="true"></span></div>
+    <div class="stream" aria-label="Live Pons launches">
+      <div class="stream-head"><span class="live-dot"></span><span>PONS STREAM</span><span class="muted" id="stream-count"></span></div>
+      <ol class="stream-list" id="stream" aria-live="polite"></ol>
+    </div>
   </div>
 </section>
 

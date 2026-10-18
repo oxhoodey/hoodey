@@ -135,9 +135,7 @@ function renderSide(d) {
 
 // ── hero: live pulse, radar scope, ticker, feed ──────────────────────
 const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const SWEEP_MS = 4000;
 const seen = new Set();
-let blipList = [];
 
 function countTo(el, to) {
   if (to == null || !Number.isFinite(to)) { el.textContent = '—'; return; }
@@ -160,51 +158,95 @@ function renderPulse(stats) {
   $('pulse-window').textContent = `Launches · ${w >= 23.5 ? '24h' : w >= 1 ? 'last ' + Math.round(w) + 'h' : 'last hour'}`;
 }
 
-function hashAngle(s) { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h % 360; }
+// ── the eye: iris follows the cursor, blinks on new launches ─────────
+const iris = $('iris'), sclera = $('sclera'), stage = $('eye-stage');
+const look = { x: 0, y: 0, tx: 0, ty: 0 };
+window.addEventListener('pointermove', (e) => {
+  const r = sclera.getBoundingClientRect();
+  const dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+  const d = Math.hypot(dx, dy) || 1, max = r.width * 0.09, k = Math.min(1, d / 400);
+  look.tx = (dx / d) * max * k; look.ty = (dy / d) * max * k;
+}, { passive: true });
+function blink() {
+  sclera.classList.add('blinking');
+  setTimeout(() => sclera.classList.remove('blinking'), 140);
+}
+(function idleBlink() { setTimeout(() => { blink(); idleBlink(); }, 4000 + Math.random() * 5000); })();
 
-function renderScope(latest) {
-  const list = (latest || []).filter((t) => t.at);
-  // Distance from the centre = age: the newest launches sit closest to the eye. Rings: 15m, 30m, 60m.
-  blipList = list.map((t, i) => {
-    const age = Math.max(0, (Date.now() - Date.parse(t.at)) / 60000);
-    const r = age <= 15 ? 12 + (age / 15) * 4 : age <= 30 ? 16 + ((age - 15) / 15) * 14 : age <= 60 ? 30 + ((age - 30) / 30) * 14 : 44 + Math.min(1, (age - 60) / 120) * 3;
-    const ang = hashAngle(t.address || t.symbol);
-    const rad = (ang - 90) * Math.PI / 180;
-    return { t, ang, x: 50 + r * Math.cos(rad), y: 50 + r * Math.sin(rad), newest: i === 0 };
-  });
-  const phase = Date.now() % SWEEP_MS;
-  const delayOf = (ang) => -((((phase - (ang / 360) * SWEEP_MS) % SWEEP_MS) + SWEEP_MS) % SWEEP_MS);
-  $('blips').innerHTML = blipList.map((b) => html`<span class="blip ${raw(b.t.risk || 'low')}${raw(b.newest ? ' newest' : '')}" title="$${b.t.symbol} · ${b.t.name} · ${timeAgo(b.t.at)}" style="left: ${raw(b.x.toFixed(2))}%; top: ${raw(b.y.toFixed(2))}%; animation-delay: ${raw(Math.round(delayOf(b.ang)))}ms"></span>`).join('');
-  $('targets').textContent = `${list.length} TARGETS`;
-  $('scope-box').setAttribute('aria-label', `Radar of the ${list.length} latest launches. Newest: ${list[0] ? '$' + list[0].symbol : 'none'}.`);
+// ── orbiting chips: the latest launches circle the eye ────────────────
+let orbs = [];
+const knownOrb = new Set();
+function renderOrbit(latest) {
+  const list = (latest || []).slice(0, window.innerWidth < 760 ? 7 : 10);
+  const freshOnes = list.filter((t) => !knownOrb.has(t.address));
+  const first = knownOrb.size === 0;
+  $('orbit').innerHTML = list.map((t) => html`<a class="chip-orb${raw(!first && freshOnes.includes(t) ? ' fresh' : '')}" href="/copycat?address=${t.address}" title="${t.name} · ${timeAgo(t.at)}${t.copycat ? ' · copy of $' + t.copycat.of : ''}"><i class="${raw(t.risk || 'low')}"></i>$${t.symbol}<small>${t.copycat ? 'copy' : t.ticker || ''}</small></a>`).join('');
+  orbs = [...$('orbit').children].map((el, i) => ({ el, base: (i / list.length) * Math.PI * 2 }));
+  list.forEach((t) => knownOrb.add(t.address));
+  if (!first && freshOnes.length) blink();
+  stage.setAttribute('aria-label', `The HoodEye watching ${list.length} latest Pons launches. Newest: ${list[0] ? '$' + list[0].symbol : 'none'}.`);
 }
 
-function describe(t) {
-  const parts = [`$${t.symbol}`, t.name, timeAgo(t.at)];
-  if (t.ticker) parts.push(`${t.ticker} narrative`);
-  parts.push(t.copycat ? `copy of $${t.copycat.of} ${t.copycat.score}%` : 'original');
-  if (t.deployerLaunches > 1) parts.push(`deployer x${t.deployerLaunches}`);
-  return parts.join(' · ');
-}
-
-// The readout names whichever blip the sweep just passed.
-let lastIdx = -1;
-function tickReadout() {
-  if (!blipList.length) return;
-  let idx;
-  if (reduceMotion) idx = (lastIdx + 1) % blipList.length;
-  else {
-    const sweep = ((Date.now() % SWEEP_MS) / SWEEP_MS) * 360;
-    let best = Infinity;
-    blipList.forEach((b, i) => { const d = (sweep - b.ang + 360) % 360; if (d < best) { best = d; idx = i; } });
+function frame(ts) {
+  look.x += (look.tx - look.x) * 0.12; look.y += (look.ty - look.y) * 0.12;
+  iris.style.transform = `translate(${look.x.toFixed(2)}px, ${look.y.toFixed(2)}px)`;
+  const w = stage.clientWidth, h = stage.clientHeight;
+  const rx = w * 0.43, ry = h * 0.4, cx = w / 2, cy = h / 2;
+  const spin = reduceMotion ? 0 : ts * 0.00006;
+  for (const o of orbs) {
+    const a = o.base + spin;
+    const depth = (Math.sin(a) + 1) / 2; // 0 = back, 1 = front
+    const x = cx + Math.cos(a) * rx - o.el.offsetWidth / 2;
+    const y = cy + Math.sin(a) * ry - o.el.offsetHeight / 2;
+    o.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) scale(${(0.82 + depth * 0.22).toFixed(3)})`;
+    o.el.style.opacity = (0.55 + depth * 0.45).toFixed(2);
+    o.el.style.zIndex = depth > 0.45 ? 3 : 1;
   }
-  if (idx === lastIdx) return;
-  lastIdx = idx;
-  $('readout').textContent = describe(blipList[idx].t);
+  requestAnimationFrame(frame);
 }
-setInterval(tickReadout, reduceMotion ? 3000 : 120);
-// Start the CSS sweep in phase with the clock the blips and readout use.
-document.querySelector('.sweep').style.animationDelay = `${-(Date.now() % SWEEP_MS)}ms`;
+requestAnimationFrame(frame);
+
+// ── stream: new launches drip in one by one, ages tick every second ──
+const streamSeen = new Set();
+const dripQueue = [];
+const streamItems = [];
+const STREAM_MAX = 5;
+function badgeOf(t) {
+  if (t.copycat) return `<span class="badge-s copy">COPY</span>`;
+  if (t.ticker) return `<span class="badge-s tk">${esc(t.ticker)}</span>`;
+  return `<span class="badge-s orig">ORIGINAL</span>`;
+}
+function ageText(at) {
+  const s = Math.max(0, Math.round((Date.now() - Date.parse(at)) / 1000));
+  if (s < 60) return `${s}s ago`;
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  return `${Math.floor(s / 3600)}h ago`;
+}
+function paintStream(enterAddr) {
+  $('stream').innerHTML = streamItems.map((t) => html`<li class="${raw(t.address === enterAddr ? 'enter' : '')}"><i class="${raw(t.risk || 'low')}"></i><span class="nm"><b>$${t.symbol}</b>${t.name}</span>${raw(badgeOf(t))}<span class="age" data-at="${t.at}">${ageText(t.at)}</span></li>`).join('') || '<li><span></span><span class="muted">Waiting for the next launch…</span></li>';
+}
+function feedStream(latest, stats) {
+  const list = (latest || []).filter((t) => t.at);
+  if (!streamSeen.size) {
+    list.slice(0, STREAM_MAX).forEach((t) => streamSeen.add(t.address));
+    streamItems.push(...list.slice(0, STREAM_MAX));
+    list.forEach((t) => streamSeen.add(t.address));
+    paintStream();
+  } else {
+    list.filter((t) => !streamSeen.has(t.address)).reverse().forEach((t) => { streamSeen.add(t.address); dripQueue.push(t); });
+  }
+  if (stats && stats.lastHour != null) $('stream-count').textContent = `${fmtInt(stats.lastHour)} in the last hour`;
+}
+setInterval(() => {
+  if (dripQueue.length) {
+    const t = dripQueue.shift();
+    streamItems.unshift(t);
+    streamItems.length = Math.min(streamItems.length, STREAM_MAX);
+    paintStream(t.address);
+  } else {
+    document.querySelectorAll('#stream .age').forEach((el) => { el.textContent = ageText(el.dataset.at); });
+  }
+}, reduceMotion ? 3000 : 1500);
 
 function renderTicker(latest) {
   const items = (latest || []).map((t) => html`<a class="tk-item" href="/copycat?address=${t.address}"><i class="${raw(t.risk || 'low')}"></i><b>$${t.symbol}</b><span>${t.name}</span><span class="muted">${timeAgo(t.at)}${t.copycat ? ' · copy of $' + t.copycat.of : t.ticker ? ' · ' + t.ticker : ''}</span></a>`).join('');
@@ -247,7 +289,8 @@ async function load() {
     renderDetail(d);
     renderSide(d);
     renderPulse(d.stats);
-    renderScope(d.latest);
+    renderOrbit(d.latest);
+    feedStream(d.latest, d.stats);
     renderTicker(d.latest);
     renderFeed(d.latest);
   } catch (err) {
