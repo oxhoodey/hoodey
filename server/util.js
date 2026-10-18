@@ -27,7 +27,12 @@ export function seededRandom(seed) {
 // Mix of edit distance on a normalized form and word overlap, so
 // "Tesla Doge" vs "TSLA Doge" and "Cyber Doge" vs "Tesla Doge" both score sensibly.
 export function normalizeName(s) {
-  return String(s || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+  // Split camelCase and letter/digit runs first, so "StrataLLM" → "strata llm" and "TeslaDoge2" → "tesla doge 2".
+  return String(s || '')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+    .replace(/([a-zA-Z])(\d)|(\d)([a-zA-Z])/g, (m, a, b, c, d) => (a ? `${a} ${b}` : `${c} ${d}`))
+    .toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
 }
 function levenshtein(a, b) {
   if (a === b) return 0;
@@ -55,13 +60,16 @@ export function nameSimilarity(a, b) {
   return Math.max(edit, jaccard, contains);
 }
 
+// Ties a token to a stock narrative. Keywords match whole words only, so "rocket" no longer
+// catches "Sprocket" and "mstr" no longer catches "StrataLLM". Long, distinctive keywords
+// (7+ letters, e.g. "zuckerberg", "gamestop") may also match inside a joined-up name like "GAMESTOPCAT".
 export function tagStock(name, symbol) {
-  const text = normalizeName(`${name} ${symbol}`);
-  const words = new Set(text.split(' '));
-  const compact = text.replace(/ /g, '');
+  const words = new Set([...normalizeName(name).split(' '), ...normalizeName(symbol).split(' ')].filter(Boolean));
+  const compact = `${name} ${symbol}`.toLowerCase().replace(/[^a-z0-9]+/g, ' ');
   for (const [ticker, kws] of Object.entries(config.keywords)) {
     for (const k of kws) {
-      if (words.has(k) || (k.length >= 4 && compact.includes(k))) return ticker;
+      if (words.has(k)) return ticker;
+      if (k.length >= 7 && compact.split(' ').some((w) => w.includes(k))) return ticker;
     }
   }
   return null;

@@ -84,14 +84,15 @@ Generated from `server/config.js` by `npm run env:example`. 🔒 = secret, never
 | `RH_EXPLORER_URL` | _empty_ | Block explorer base URL. When set, addresses link to it (e.g. <url>/address/0x…). |
 | `BITQUERY_API_KEY` 🔒 | _empty_ | Bitquery access token. Needed for live launches, trades and deployer history. |
 | `BITQUERY_ENDPOINT` | `https://streaming.bitquery.io/graphql` | Bitquery GraphQL endpoint. |
-| `BITQUERY_DATASET` | `combined` | Bitquery dataset for EVM queries. archive and combined reach further back. Options: `realtime`, `archive`, `combined`. |
+| `BITQUERY_DATASET` | `realtime` | Bitquery dataset for EVM queries. realtime works on every plan; archive and combined reach further back but need the Robinhood archive add-on. Options: `realtime`, `archive`, `combined`. |
 | `PONS_FACTORY_ADDRESS` | `0x7ed598bcef8bd9edd8c97a195c6d13f40801ec7e` | Pons launch factory contract. |
 | `PONS_ROUTER_ADDRESS` | `0xe33e9e479df8802cb0866d5d05258bec4cf62948` | Pons router contract. |
 | `LAUNCH_LIMIT` | `300` | How many recent launches to pull per refresh in live mode. |
 | **Radar** | | |
-| `STOCK_TOKENS` | `TSLA:Tesla:,NVDA:Nvidia:,COIN:Coinbase:,GME:GameStop:,AAPL:Apple:` | Stock tokens to watch, comma separated, as TICKER:Name:tokenAddress. The address is needed for live price moves. |
-| `STOCK_KEYWORDS` | `TSLA=tesla\|elon\|musk\|cyber\|rocket\|tsla\|giga;NVDA=nvidia\|nvda\|gpu\|chip\|jensen\|leather;COIN=coinbase\|coin\|base\|armstrong;GME=gamestop\|gme\|stonk\|squeeze\|diamond\|ape\|kitty;AAPL=apple\|aapl\|iphone\|tim` | Words that tie a memecoin to a stock. TICKER=word\|word;TICKER=word… |
+| `STOCK_TOKENS` | `TSLA:Tesla:0x322F0929c4625eD5bAd873c95208D54E1c003b2d,NVDA:Nvidia:0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC,AAPL:Apple:0xaF3D76f1834A1d425780943C99Ea8A608f8a93f9,COIN:Coinbase:0x6330D8C3178a418788dF01a47479c0ce7CCF450b,MSTR:MicroStrategy:0xec262a75e413fAfD0dF80480274532C79D42da09,META:Meta:0xc0D6457C16Cc70d6790Dd43521C899C87ce02f35` | Stock tokens to watch, comma separated, as TICKER:Name:tokenAddress. The address is needed for live price moves. |
+| `STOCK_KEYWORDS` | `TSLA=tesla\|elon\|musk\|cyber\|tsla\|cybertruck;NVDA=nvidia\|nvda\|gpu\|jensen\|leather;AAPL=apple\|aapl\|iphone;COIN=coinbase\|armstrong;MSTR=microstrategy\|mstr\|saylor;META=zuck\|zuckerberg\|facebook;GME=gamestop\|gme\|stonk\|squeeze\|kitty` | Words that tie a memecoin to a stock. TICKER=word\|word;TICKER=word… |
 | `SPIKE_THRESHOLD_PCT` | `5` | A stock token move of at least this many percent counts as a spike. |
+| `SPIKE_MIN_TRADES` | `3` | Trades needed past the halfway price before a move counts as a spike. Stops a single odd trade in a thin market from triggering the radar. |
 | `SPIKE_LOOKBACK_HOURS` | `6` | Default time window for the radar (1, 6 or 24 are offered in the UI). |
 | `RADAR_MAX_TOKENS` | `12` | Most themed tokens listed per spike. |
 | **Copycat Eye** | | |

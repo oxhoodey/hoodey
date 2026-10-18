@@ -23,15 +23,16 @@ export const VARIABLES = [
   { group: 'Robinhood Chain', name: 'RH_EXPLORER_URL', type: 'string', default: '', public: true, desc: 'Block explorer base URL. When set, addresses link to it (e.g. <url>/address/0x…).' },
   { group: 'Robinhood Chain', name: 'BITQUERY_API_KEY', type: 'string', default: '', secret: true, desc: 'Bitquery access token. Needed for live launches, trades and deployer history.' },
   { group: 'Robinhood Chain', name: 'BITQUERY_ENDPOINT', type: 'string', default: 'https://streaming.bitquery.io/graphql', desc: 'Bitquery GraphQL endpoint.' },
-  { group: 'Robinhood Chain', name: 'BITQUERY_DATASET', type: 'enum', options: ['realtime', 'archive', 'combined'], default: 'combined', desc: 'Bitquery dataset for EVM queries. archive and combined reach further back.' },
+  { group: 'Robinhood Chain', name: 'BITQUERY_DATASET', type: 'enum', options: ['realtime', 'archive', 'combined'], default: 'realtime', desc: 'Bitquery dataset for EVM queries. realtime works on every plan; archive and combined reach further back but need the Robinhood archive add-on.' },
   { group: 'Robinhood Chain', name: 'PONS_FACTORY_ADDRESS', type: 'string', default: '0x7ed598bcef8bd9edd8c97a195c6d13f40801ec7e', desc: 'Pons launch factory contract.' },
   { group: 'Robinhood Chain', name: 'PONS_ROUTER_ADDRESS', type: 'string', default: '0xe33e9e479df8802cb0866d5d05258bec4cf62948', desc: 'Pons router contract.' },
   { group: 'Robinhood Chain', name: 'LAUNCH_LIMIT', type: 'int', default: 300, desc: 'How many recent launches to pull per refresh in live mode.' },
 
   // ── Radar ────────────────────────────────────────────────────────────
-  { group: 'Radar', name: 'STOCK_TOKENS', type: 'string', default: 'TSLA:Tesla:,NVDA:Nvidia:,COIN:Coinbase:,GME:GameStop:,AAPL:Apple:', public: true, desc: 'Stock tokens to watch, comma separated, as TICKER:Name:tokenAddress. The address is needed for live price moves.' },
-  { group: 'Radar', name: 'STOCK_KEYWORDS', type: 'string', default: 'TSLA=tesla|elon|musk|cyber|rocket|tsla|giga;NVDA=nvidia|nvda|gpu|chip|jensen|leather;COIN=coinbase|coin|base|armstrong;GME=gamestop|gme|stonk|squeeze|diamond|ape|kitty;AAPL=apple|aapl|iphone|tim', desc: 'Words that tie a memecoin to a stock. TICKER=word|word;TICKER=word…' },
+  { group: 'Radar', name: 'STOCK_TOKENS', type: 'string', default: 'TSLA:Tesla:0x322F0929c4625eD5bAd873c95208D54E1c003b2d,NVDA:Nvidia:0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC,AAPL:Apple:0xaF3D76f1834A1d425780943C99Ea8A608f8a93f9,COIN:Coinbase:0x6330D8C3178a418788dF01a47479c0ce7CCF450b,MSTR:MicroStrategy:0xec262a75e413fAfD0dF80480274532C79D42da09,META:Meta:0xc0D6457C16Cc70d6790Dd43521C899C87ce02f35', public: true, desc: 'Stock tokens to watch, comma separated, as TICKER:Name:tokenAddress. The address is needed for live price moves.' },
+  { group: 'Radar', name: 'STOCK_KEYWORDS', type: 'string', default: 'TSLA=tesla|elon|musk|cyber|tsla|cybertruck;NVDA=nvidia|nvda|gpu|jensen|leather;AAPL=apple|aapl|iphone;COIN=coinbase|armstrong;MSTR=microstrategy|mstr|saylor;META=zuck|zuckerberg|facebook;GME=gamestop|gme|stonk|squeeze|kitty', desc: 'Words that tie a memecoin to a stock. TICKER=word|word;TICKER=word…' },
   { group: 'Radar', name: 'SPIKE_THRESHOLD_PCT', type: 'float', default: 5, public: true, desc: 'A stock token move of at least this many percent counts as a spike.' },
+  { group: 'Radar', name: 'SPIKE_MIN_TRADES', type: 'int', default: 3, desc: 'Trades needed past the halfway price before a move counts as a spike. Stops a single odd trade in a thin market from triggering the radar.' },
   { group: 'Radar', name: 'SPIKE_LOOKBACK_HOURS', type: 'int', default: 6, public: true, desc: 'Default time window for the radar (1, 6 or 24 are offered in the UI).' },
   { group: 'Radar', name: 'RADAR_MAX_TOKENS', type: 'int', default: 12, desc: 'Most themed tokens listed per spike.' },
 

@@ -153,13 +153,18 @@ export async function radar(rangeHours) {
     try {
       const tr = (await stockTrades(s.address)).filter((x) => x.t >= from - 3600e3);
       const inRange = tr.filter((x) => x.t >= from);
-      if (inRange.length < 2) continue;
-      const before = tr.filter((x) => x.t < from).pop() || inRange[0];
-      const lastP = inRange[inRange.length - 1].p;
-      const movePct = ((lastP - before.p) / before.p) * 100;
+      if (inRange.length < config.SPIKE_MIN_TRADES) continue;
+      // Median prices, so one odd trade in a thin market can't fake a spike.
+      const priorTrades = tr.filter((x) => x.t < from);
+      const startP = median((priorTrades.length ? priorTrades.slice(-5) : inRange.slice(0, 5)).map((x) => x.p));
+      const lastP = median(inRange.slice(-3).map((x) => x.p));
+      const movePct = ((lastP - startP) / startP) * 100;
       if (Math.abs(movePct) < config.SPIKE_THRESHOLD_PCT) continue;
-      const half = before.p + (lastP - before.p) / 2;
-      const cross = inRange.find((x) => (movePct > 0 ? x.p >= half : x.p <= half)) || inRange[0];
+      // The move must hold: at least SPIKE_MIN_TRADES trades past the halfway price.
+      const half = startP + (lastP - startP) / 2;
+      const past = inRange.filter((x) => (movePct > 0 ? x.p >= half : x.p <= half));
+      if (past.length < config.SPIKE_MIN_TRADES) continue;
+      const cross = past[0];
       const themed = all.filter((l) => l.ticker === s.ticker && Date.parse(l.at) >= cross.t).sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
       events.push({
         ticker: s.ticker, name: s.name, up: movePct >= 0, movePct: +movePct.toFixed(1), trigger: `${movePct >= 0 ? 'Up' : 'Down'} ${Math.abs(movePct).toFixed(1)}% in ${rangeHours}h`,
@@ -261,7 +266,7 @@ export async function clockGaps() {
       if (tradingDay && z.hour * 60 + z.minute <= closeMin && tr[i].t < Date.now() - 60e3) { closeTrade = tr[i]; break; }
     }
     if (!closeTrade) continue;
-    const last = tr[tr.length - 1].p;
+    const last = median(tr.slice(-3).map((x) => x.p));
     items.push({ ticker: s.ticker, price: +last.toFixed(2), gapPct: +(((last - closeTrade.p) / closeTrade.p) * 100).toFixed(1) });
   }
   if (!items.length) throw new Error('Not enough trade history for gaps');
