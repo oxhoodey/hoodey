@@ -1,4 +1,6 @@
 import { initPage, api, html, raw, esc, fmtInt, fmtUsd, fmtPct, fmtDuration, timeAgo, sourceBadge, every, isAddress, explorerLink, ponsLink, avatar } from './common.js';
+import { createHotField, fmtPrice, METRICS } from './hotfield.js';
+import { createLaunchTape } from './launchtape.js';
 
 const cfg = await initPage('radar');
 const state = { range: [1, 6, 24].includes(cfg.SPIKE_LOOKBACK_HOURS) ? cfg.SPIKE_LOOKBACK_HOURS : 6, ticker: null, data: null };
@@ -253,24 +255,7 @@ function renderTicker(latest) {
   $('ticker').innerHTML = items + items.replace(/<a /g, '<a tabindex="-1" aria-hidden="true" ');
 }
 
-function renderFeed(latest) {
-  const head = '<div class="feed-row head" role="row"><span role="columnheader">TOKEN</span><span role="columnheader">LAUNCHED</span><span role="columnheader">NARRATIVE</span><span role="columnheader">COPYCAT</span><span role="columnheader">DEPLOYER</span><span role="columnheader">RISK</span><span role="columnheader">TRADE</span></div>';
-  const rows = (latest || []).map((t) => {
-    const fresh = !seen.has(t.address) && seen.size > 0;
-    seen.add(t.address);
-    return html`<div class="feed-row${raw(fresh ? ' new' : '')}" role="row" tabindex="0" data-href="/copycat?address=${t.address}">
-      <span role="cell" class="tok">${raw(avatar(t))}<span><span class="nm">${t.name}</span><span class="sy">$${t.symbol} · ${t.launchpad}</span></span></span>
-      <span role="cell" class="muted">${timeAgo(t.at)}</span>
-      <span role="cell">${raw(t.ticker ? `<span class="chip chip-accent">${esc(t.ticker)}</span>` : '<span class="muted">—</span>')}</span>
-      <span role="cell" style="font-size: 12px; ${raw(t.copycat ? 'font-weight: 600; color: var(--danger)' : 'color: var(--muted)')}">${t.copycat ? `Like $${t.copycat.of} ${t.copycat.score}%` : 'Original'}</span>
-      <span role="cell" class="muted">${t.deployerLaunches > 1 ? `${t.deployerLaunches} launches` : 'First seen'}</span>
-      <span role="cell"><span class="risk ${t.risk}">${t.risk ? t.risk[0].toUpperCase() + t.risk.slice(1) : '—'}</span></span>
-      <span role="cell">${raw(ponsLink(cfg, t.address, 'Pons', 'pons-btn sm'))}</span>
-    </div>`;
-  }).join('');
-  if (!(latest || []).length) seen.add('_');
-  $('feed-rows').innerHTML = head + (rows || '<div class="empty">No launches seen yet.</div>');
-}
+const tape = createLaunchTape({ tape: $('launch-tape'), grid: $('feed-rows'), count: $('lx-count'), cfg });
 
 async function pollBlock() {
   if (cfg.DATA_MODE !== 'live') { $('live-label').textContent = 'SAMPLE MODE · DEMO DATA'; $('block').textContent = ''; return; }
@@ -283,19 +268,10 @@ pollBlock();
 setInterval(pollBlock, 5000);
 
 // ── Hot right now ─────────────────────────────────────────────────────
-const hot = { data: null, sort: 'volume', filters: {} };
-try { const saved = JSON.parse(localStorage.getItem('hoodeye.hot') || '{}'); if (saved.sort) hot.sort = saved.sort; if (saved.filters) hot.filters = saved.filters; } catch { /* storage unavailable */ }
-const saveHot = () => { try { localStorage.setItem('hoodeye.hot', JSON.stringify({ sort: hot.sort, filters: hot.filters })); } catch { /* ignore */ } };
+const hot = { data: null, sort: 'volume', filters: {}, view: 'field' };
+try { const saved = JSON.parse(localStorage.getItem('hoodeye.hot') || '{}'); if (saved.sort) hot.sort = saved.sort; if (saved.filters) hot.filters = saved.filters; if (saved.view) hot.view = saved.view; } catch { /* storage unavailable */ }
+const saveHot = () => { try { localStorage.setItem('hoodeye.hot', JSON.stringify({ sort: hot.sort, filters: hot.filters, view: hot.view })); } catch { /* ignore */ } };
 
-function fmtPrice(p) {
-  if (p == null || !Number.isFinite(p) || p <= 0) return '—';
-  if (p >= 1) return '$' + p.toFixed(2);
-  const zeros = Math.floor(-Math.log10(p));
-  if (zeros < 4) return '$' + p.toPrecision(3);
-  const sub = String(zeros).split('').map((c) => '₀₁₂₃₄₅₆₇₈₉'[c]).join('');
-  const digits = Math.round(p * 10 ** (zeros + 3)).toString().slice(0, 3);
-  return `$0.0${sub}${digits}`; // DEX style: 0.0₅213 = 0.00000213
-}
 function spark(vals, up) {
   if (!vals || vals.length < 2) return '';
   const min = Math.min(...vals), max = Math.max(...vals), span = max - min || 1;
@@ -316,6 +292,12 @@ function renderHot() {
     !(F.fresh && !(r.launchedAt && Date.now() - Date.parse(r.launchedAt) < 3600e3)) && !(F.stock && !r.ticker));
   const by = { volume: (r) => r.volumeUsd, traders: (r) => r.traders, momentum: (r) => r.changePct ?? -1e9, buy: (r) => r.buyPct ?? -1, new: (r) => (r.launchedAt ? Date.parse(r.launchedAt) : 0) }[hot.sort];
   rows = [...rows].sort((a, b) => by(b) - by(a));
+  document.querySelectorAll('#hot-view button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === hot.view)));
+  $('hot-field-wrap').hidden = hot.view !== 'field';
+  document.querySelector('.hotx-legend').hidden = hot.view !== 'field';
+  $('hot-list').hidden = hot.view !== 'list';
+  $('legend-size').textContent = METRICS[hot.sort].label;
+  if (hot.view === 'field') field.update(rows, hot.sort);
   const head = '<div class="hot-row head" role="row"><span role="columnheader">#</span><span role="columnheader">TOKEN</span><span role="columnheader">PRICE · CHANGE</span><span role="columnheader">VOLUME</span><span role="columnheader">TRADES</span><span role="columnheader">TRADERS</span><span role="columnheader">BUY PRESSURE</span><span role="columnheader">TOP WALLET</span><span role="columnheader">FLAGS</span><span role="columnheader">TRADE</span></div>';
   const body = rows.map((r, i) => {
     const up = (r.changePct ?? 0) >= 0;
@@ -337,12 +319,15 @@ function renderHot() {
   $('hot-rows').innerHTML = head + (body || `<div class="empty">No token passes these filters right now. Turn a filter off to see more.</div>`);
 }
 
+const field = createHotField({ stage: $('hot-field'), focus: $('hot-focus'), cfg, onOpen: (a) => { location.href = `/copycat?address=${a}`; } });
+$('hot-view').addEventListener('click', (e) => { const b = e.target.closest('button[data-v]'); if (!b) return; hot.view = b.dataset.v; saveHot(); renderHot(); });
+
 async function loadHot() {
   try { hot.data = await api('/api/trending'); renderHot(); }
-  catch (err) { $('hot-rows').innerHTML = html`<div class="empty">Couldn't load the board: ${err.message}</div>`; }
+  catch (err) { $('hot-rows').innerHTML = html`<div class="empty">Couldn't load the board: ${err.message}</div>`; $('hot-focus').innerHTML = html`<div class="empty">Couldn't load the board: ${err.message}</div>`; }
 }
 // Rows open Copycat Eye; the Pons button inside opens ponsfamily.com instead.
-for (const id of ['hot-rows', 'feed-rows']) {
+for (const id of ['hot-rows']) {
   const box = $(id);
   const go = (e) => { const row = e.target.closest('[data-href]'); if (row && !e.target.closest('a')) location.href = row.dataset.href; };
   box.addEventListener('click', go);
@@ -362,7 +347,7 @@ async function load() {
     renderOrbit(d.latest);
     feedStream(d.latest, d.stats);
     renderTicker(d.latest);
-    renderFeed(d.latest);
+    tape.update(d.latest, d.timeline);
   } catch (err) {
     $('cards').innerHTML = html`<div class="empty" style="grid-column: 1 / -1">Couldn't load the radar: ${err.message}</div>`;
     $('detail').innerHTML = '';

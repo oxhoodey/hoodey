@@ -56,16 +56,24 @@
 
 <div class="ticker" aria-label="Latest launches"><div class="ticker-track" id="ticker"></div></div>
 
-<section class="panel" id="hot-board" aria-label="Hot right now" style="gap: 18px">
+<section class="panel hotx" id="hot-board" aria-label="Hot right now">
   <div class="panel-head" style="align-items: flex-end">
     <div style="display: flex; flex-direction: column; gap: 4px">
-      <span class="eyebrow">Trader board</span>
+      <span class="eyebrow">Trader board · Heat core</span>
       <h2 style="font-size: 30px; font-weight: 700; letter-spacing: -0.02em">Hot right now</h2>
       <span class="small muted" id="hot-sub">Most traded Pons tokens, checked for red flags.</span>
     </div>
     <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; max-width: 100%; min-width: 0">
       <span class="src" id="src-trending" hidden></span>
-      <div class="segmented" role="group" aria-label="Sort by" id="hot-sort">
+      <div class="segmented seg-sm" role="group" aria-label="View" id="hot-view">
+        <button type="button" data-v="field">Heat core</button>
+        <button type="button" data-v="list">List</button>
+      </div>
+    </div>
+  </div>
+  <div class="hotx-bar">
+    <div class="hotx-size"><span class="small muted" style="font-weight: 600">Size by</span>
+      <div class="segmented" role="group" aria-label="Size and order by" id="hot-sort">
         <button type="button" data-s="volume">Volume</button>
         <button type="button" data-s="traders">Traders</button>
         <button type="button" data-s="momentum">Momentum</button>
@@ -73,16 +81,27 @@
         <button type="button" data-s="new">Newest</button>
       </div>
     </div>
+    <div class="filters" role="group" aria-label="Safety filters" id="hot-filters">
+      <span class="small muted" style="font-weight: 600">Filters</span>
+      <button type="button" data-f="noCopy">Hide copies</button>
+      <button type="button" data-f="noRepeat">Hide repeat deployers</button>
+      <button type="button" data-f="noWhale">Hide whale-heavy</button>
+      <button type="button" data-f="fresh">Under 1h old</button>
+      <button type="button" data-f="stock">Stock narratives only</button>
+    </div>
   </div>
-  <div class="filters" role="group" aria-label="Safety filters" id="hot-filters">
-    <span class="small muted" style="font-weight: 600">Filters</span>
-    <button type="button" data-f="noCopy">Hide copies</button>
-    <button type="button" data-f="noRepeat">Hide repeat deployers</button>
-    <button type="button" data-f="noWhale">Hide whale-heavy</button>
-    <button type="button" data-f="fresh">Under 1h old</button>
-    <button type="button" data-f="stock">Stock narratives only</button>
+  <div class="hotx-stage" id="hot-field-wrap">
+    <div class="hotx-field" id="hot-field" aria-label="Hot tokens. Bigger orbs have more volume; the hottest sit in the core."><span class="hotx-core" aria-hidden="true"></span></div>
+    <aside class="hotx-focus" id="hot-focus" aria-live="polite"><div class="skel" style="min-height: 320px"></div></aside>
   </div>
-  <div class="table-scroll"><div class="ttable" style="min-width: 980px" role="table" aria-label="Hot Pons tokens" id="hot-rows"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div></div>
+  <ul class="hotx-legend" aria-label="How to read the heat core">
+    <li><i class="lg-size"></i>Size = <b id="legend-size">volume</b></li>
+    <li><i class="lg-core"></i>Closer to the core = hotter</li>
+    <li><i class="lg-glow"></i>Glow = price change (green up, orange down)</li>
+    <li><i class="lg-ring"></i>Ring = buy pressure</li>
+    <li><i class="lg-flag"></i>Red dot = red flag</li>
+  </ul>
+  <div class="table-scroll" id="hot-list" hidden><div class="ttable" style="min-width: 980px" role="table" aria-label="Hot Pons tokens" id="hot-rows"></div></div>
   <p class="note">Buy pressure = share of volume from buys. Top wallet = share of volume from the single biggest trader. Flags are heuristics, not proof. Not financial advice.</p>
 </section>
 
@@ -139,12 +158,14 @@
   </aside>
 </div>
 
-<section class="panel" id="feed" aria-label="Latest Pons launches" style="scroll-margin-top: 20px">
-  <div class="panel-head" style="align-items: center">
-    <div style="display: flex; flex-direction: column; gap: 2px"><span class="eyebrow">Live feed</span><h2 style="font-size: 24px; font-weight: 700; letter-spacing: -0.02em">Latest Pons launches</h2></div>
-    <span class="small muted">Every launch, checked for copies and repeat deployers. Click one to open it in Copycat Eye.</span>
+<section class="panel launchx" id="feed" aria-label="Latest Pons launches" style="scroll-margin-top: 20px">
+  <div class="panel-head" style="align-items: flex-end">
+    <div style="display: flex; flex-direction: column; gap: 4px"><span class="eyebrow">Live feed · Launch tape</span><h2 style="font-size: 28px; font-weight: 700; letter-spacing: -0.02em">Latest Pons launches</h2>
+      <span class="small muted">Every dot is a new token on Pons in the last hour. Red = likely copy or farm deployer. <span class="lx-swipe">Swipe the cards for more.</span></span></div>
+    <div class="lx-count"><span class="live-dot" aria-hidden="true"></span><b id="lx-count">0</b><span>launches<br>last 60 min</span></div>
   </div>
-  <div class="table-scroll"><div class="ttable" style="min-width: 760px" id="feed-rows" role="table" aria-label="Latest launches"></div></div>
+  <div class="tape" id="launch-tape" aria-label="Launches over the last 60 minutes"></div>
+  <div class="lgrid" id="feed-rows" aria-label="Newest launches"></div>
 </section>
 
 </main>

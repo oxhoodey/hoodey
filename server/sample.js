@@ -73,6 +73,11 @@ export function radar(rangeHours) {
     moves: [...spikes, ...quiet],
     events: spikes,
     latest: LATEST,
+    // last hour of launches for the launch tape (demo: 61 points)
+    timeline: Array.from({ length: 61 }, (_, i) => {
+      const l = LATEST[i % LATEST.length];
+      return { address: l.address, symbol: l.symbol, at: ago(i * 0.97 + ((i * 37) % 10) / 20), risk: ['low', 'low', 'medium', 'low', 'high'][(i * 7) % 5] };
+    }),
     stats: { windowHours: 24, launches: 1284, lastHour: 61, copycats: 217, deployers: 388, themed: 76 },
     hot: { source: 'sample', items: [['GME', 31], ['TSLA', 23], ['NVDA', 11], ['COIN', 7], ['AAPL', 4]].map(([ticker, count]) => ({ ticker, count })) },
     life: { source: 'sample', medianMin: 134, buckets: [{ label: '< 1h', pct: 38 }, { label: '1–6h', pct: 44 }, { label: '6–24h', pct: 11 }, { label: '> 24h', pct: 7 }] }

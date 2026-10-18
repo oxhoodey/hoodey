@@ -155,7 +155,9 @@ export async function radar(rangeHours) {
     deployers: new Set(recent.map((l) => l.creator)).size,
     themed: recent.filter((l) => l.ticker).length
   };
-  return { source: 'live', moves, events: moves.filter((m) => m.spike), latest: all.slice(0, 16).map((l) => tokenRow(l, all, creatorCounts, null, vol)), stats, hot: { source: 'live', items: hot }, errors };
+  return { source: 'live', moves, events: moves.filter((m) => m.spike), latest: all.slice(0, 16).map((l) => tokenRow(l, all, creatorCounts, null, vol)),
+    timeline: all.filter((l) => l.t >= now - 3600e3).slice(0, 400).map((l) => ({ address: l.address, symbol: l.symbol, at: l.at, risk: tokenRow(l, all, creatorCounts, null, null).risk })),
+    stats, hot: { source: 'live', items: hot }, errors };
 }
 
 // ── Hot right now: Pons bonding-curve trades in the last TRENDING_WINDOW_MIN, per token ──
