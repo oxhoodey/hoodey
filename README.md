@@ -87,6 +87,8 @@ Generated from `server/config.js` by `npm run env:example`. 🔒 = secret, never
 | `BITQUERY_DATASET` | `realtime` | Bitquery dataset for EVM queries. realtime works on every plan; archive and combined reach further back but need the Robinhood archive add-on. Options: `realtime`, `archive`, `combined`. |
 | `PONS_FACTORY_ADDRESS` | `0x7ed598bcef8bd9edd8c97a195c6d13f40801ec7e` | Pons launch factory contract. |
 | `PONS_ROUTER_ADDRESS` | `0xe33e9e479df8802cb0866d5d05258bec4cf62948` | Pons router contract. |
+| `LIVE_CACHE_SECONDS` | `120` | How long launches and stock trades from Bitquery are reused before a background refresh. Raise it if Bitquery says "rate limit". |
+| `BITQUERY_MIN_INTERVAL_MS` | `1500` | Minimum gap between Bitquery requests. Raise it (e.g. 4000) on plans with a low requests-per-minute limit. |
 | `LAUNCH_LIMIT` | `300` | How many recent launches to pull per refresh in live mode. |
 | **Radar** | | |
 | `STOCK_TOKENS` | `TSLA:Tesla:0x322F0929c4625eD5bAd873c95208D54E1c003b2d,NVDA:Nvidia:0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC,AAPL:Apple:0xaF3D76f1834A1d425780943C99Ea8A608f8a93f9,COIN:Coinbase:0x6330D8C3178a418788dF01a47479c0ce7CCF450b,MSTR:MicroStrategy:0xec262a75e413fAfD0dF80480274532C79D42da09,META:Meta:0xc0D6457C16Cc70d6790Dd43521C899C87ce02f35` | Stock tokens to watch, comma separated, as TICKER:Name:tokenAddress. The address is needed for live price moves. |

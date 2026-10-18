@@ -3,15 +3,70 @@
 import { config } from './config.js';
 import { fetchJson, log, nameSimilarity, tagStock, zonedParts, toMinutes, median, isAddress } from './util.js';
 
+// ── Bitquery: one request at a time, spaced out, with a shared cache ──
+// Plans limit requests per minute, so every page shares the same launches list and the same
+// trades per stock instead of asking again, and calls wait their turn in a queue.
+let queue = Promise.resolve();
+let lastCall = 0;
+let cooldownUntil = 0;
+
+function schedule(fn) {
+  // While cooling down after a rate-limit answer, fail fast so callers reuse their last good data.
+  if (Date.now() < cooldownUntil) return Promise.reject(new Error(`Bitquery rate limit: cooling down ${Math.ceil((cooldownUntil - Date.now()) / 1000)}s`));
+  const run = queue.then(async () => {
+    if (Date.now() < cooldownUntil) throw new Error('Bitquery rate limit: cooling down');
+    const wait = lastCall + config.BITQUERY_MIN_INTERVAL_MS - Date.now();
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    lastCall = Date.now();
+    return fn();
+  });
+  queue = run.catch(() => {});
+  return run;
+}
+
 async function bitquery(query, variables = {}) {
   if (!config.BITQUERY_API_KEY) throw new Error('BITQUERY_API_KEY is not set');
-  const body = await fetchJson(config.BITQUERY_ENDPOINT, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.BITQUERY_API_KEY}` },
-    body: JSON.stringify({ query, variables })
+  return schedule(async () => {
+    try {
+      const body = await fetchJson(config.BITQUERY_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.BITQUERY_API_KEY}` },
+        body: JSON.stringify({ query, variables })
+      });
+      if (body.errors && body.errors.length) throw new Error('Bitquery: ' + body.errors.map((e) => e.message).join('; ').slice(0, 400));
+      return body.data;
+    } catch (e) {
+      if (/HTTP 429|rate limit/i.test(e.message)) {
+        cooldownUntil = Date.now() + 60e3; // back off for a minute
+        log.warn('Bitquery rate limit hit; pausing calls for 60s');
+      }
+      throw e;
+    }
   });
-  if (body.errors && body.errors.length) throw new Error('Bitquery: ' + body.errors.map((e) => e.message).join('; ').slice(0, 400));
-  return body.data;
+}
+
+// Shared results: fresh for LIVE_CACHE_SECONDS; if a refresh fails, the last good copy is reused.
+const shared = new Map();
+async function sharedFetch(key, fn) {
+  const hit = shared.get(key);
+  const now = Date.now();
+  if (hit && hit.value !== undefined && now - hit.at < config.LIVE_CACHE_SECONDS * 1000) return hit.value;
+  if (hit && hit.pending) return hit.pending;
+  const pending = fn().then((value) => {
+    shared.set(key, { value, at: Date.now() });
+    return value;
+  }).catch((e) => {
+    const prev = shared.get(key);
+    if (prev && prev.value !== undefined) {
+      shared.set(key, { value: prev.value, at: prev.at });
+      log.warn(`${key}: refresh failed (${e.message.slice(0, 80)}), serving last good data`);
+      return prev.value;
+    }
+    shared.delete(key);
+    throw e;
+  });
+  shared.set(key, { ...(hit || {}), pending });
+  return pending;
 }
 
 async function rpc(method, params) {
@@ -78,7 +133,11 @@ query Launches($limit: Int!, $contracts: [String!]) {
   }
 }`;
 
-export async function launches() {
+export function launches() {
+  return sharedFetch('launches', fetchLaunches);
+}
+
+async function fetchLaunches() {
   const data = await bitquery(LAUNCHES_Q, { limit: config.LAUNCH_LIMIT, contracts: [config.PONS_FACTORY_ADDRESS, config.PONS_ROUTER_ADDRESS] });
   const rows = (data && data.EVM && data.EVM.Transfers) || [];
   return rows.map((r) => {
@@ -110,7 +169,11 @@ query StockTrades($token: String!, $limit: Int!) {
   }
 }`;
 
-async function stockTrades(address) {
+function stockTrades(address) {
+  return sharedFetch(`trades:${address}`, () => fetchStockTrades(address));
+}
+
+async function fetchStockTrades(address) {
   const data = await bitquery(TRADES_Q, { token: address, limit: 1000 });
   return ((data && data.Trading && data.Trading.Trades) || [])
     .map((t) => ({ t: Date.parse(t.Block.Time), p: Number(t.PriceInUsd) }))
@@ -331,3 +394,18 @@ export async function wallet(address) {
 }
 
 export { median };
+
+// Keeps the shared launches and stock trades fresh in the background, so visitors read from
+// cache instead of waiting on Bitquery, and the request rate stays flat no matter the traffic.
+export function startWarmer() {
+  if (!config.BITQUERY_API_KEY) return;
+  const warm = async () => {
+    try { await launches(); } catch (e) { log.warn('warm launches:', e.message.slice(0, 120)); }
+    for (const s of config.stocks.filter((x) => x.address)) {
+      try { await stockTrades(s.address); } catch (e) { log.warn(`warm ${s.ticker}:`, e.message.slice(0, 120)); }
+    }
+  };
+  warm();
+  setInterval(warm, Math.max(30, config.LIVE_CACHE_SECONDS - 10) * 1000).unref();
+  log.info(`Live warmer on: refreshing launches and ${config.stocks.filter((x) => x.address).length} stock tokens every ~${config.LIVE_CACHE_SECONDS}s`);
+}

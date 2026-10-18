@@ -26,6 +26,8 @@ export const VARIABLES = [
   { group: 'Robinhood Chain', name: 'BITQUERY_DATASET', type: 'enum', options: ['realtime', 'archive', 'combined'], default: 'realtime', desc: 'Bitquery dataset for EVM queries. realtime works on every plan; archive and combined reach further back but need the Robinhood archive add-on.' },
   { group: 'Robinhood Chain', name: 'PONS_FACTORY_ADDRESS', type: 'string', default: '0x7ed598bcef8bd9edd8c97a195c6d13f40801ec7e', desc: 'Pons launch factory contract.' },
   { group: 'Robinhood Chain', name: 'PONS_ROUTER_ADDRESS', type: 'string', default: '0xe33e9e479df8802cb0866d5d05258bec4cf62948', desc: 'Pons router contract.' },
+  { group: 'Robinhood Chain', name: 'LIVE_CACHE_SECONDS', type: 'int', default: 120, desc: 'How long launches and stock trades from Bitquery are reused before a background refresh. Raise it if Bitquery says "rate limit".' },
+  { group: 'Robinhood Chain', name: 'BITQUERY_MIN_INTERVAL_MS', type: 'int', default: 1500, desc: 'Minimum gap between Bitquery requests. Raise it (e.g. 4000) on plans with a low requests-per-minute limit.' },
   { group: 'Robinhood Chain', name: 'LAUNCH_LIMIT', type: 'int', default: 300, desc: 'How many recent launches to pull per refresh in live mode.' },
 
   // ── Radar ────────────────────────────────────────────────────────────

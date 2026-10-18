@@ -6,6 +6,7 @@ import { config, publicConfig } from './config.js';
 import { log, isAddress } from './util.js';
 import * as data from './data.js';
 import { startAlerts } from './alerts.js';
+import { startWarmer } from './live.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PUBLIC = path.join(ROOT, 'public');
@@ -194,6 +195,7 @@ if (config.DATA_MODE === 'live' && !config.BITQUERY_API_KEY) log.warn('DATA_MODE
 
 server.listen(config.PORT, '0.0.0.0', () => {
   log.info(`${config.APP_NAME} listening on :${config.PORT} (data: ${config.DATA_MODE}${config.liveReady ? ', live ready' : ''})`);
+  if (config.DATA_MODE === 'live') startWarmer();
   startAlerts();
 });
 
