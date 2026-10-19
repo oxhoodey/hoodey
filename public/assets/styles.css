@@ -822,7 +822,7 @@ h1, h2, .display, .big, .brand-name, .fx-big, .lx-count b, .pulse .v, .stat .v, 
 .pd-city { position: absolute; left: 0; right: 0; top: 34%; text-align: center; font-family: var(--mono-f); font-size: 11px; letter-spacing: 0.12em; color: var(--muted); }
 .pd-chip { position: absolute; left: 50%; top: 61%; transform: translateX(-50%); font-size: 11px; }
 
-.brand-word { display: block; height: 28px; width: auto; }
+.brand-word { display: block; height: 28px; width: auto; transform: translateY(3px); }
 @media (max-width: 760px) { .brand-word { height: 24px; } }
 
 /* ── X-Ray: Death Clock + Wallet X-Ray ─────────────────────────────────── */
