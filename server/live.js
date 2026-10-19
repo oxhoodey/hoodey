@@ -8,9 +8,7 @@ import { tokenSummary, ethUsd, historyOf, startPriceWatch } from './dexpaprika.j
 
 async function rpc(method, params) {
   if (!config.RH_RPC_URL) throw new Error('RH_RPC_URL is not set');
-  const body = await fetchJson(config.RH_RPC_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }) });
-  if (body.error) throw new Error('RPC: ' + body.error.message);
-  return body.result;
+  return ix.chainRpc(method, params); // retries when the endpoint is busy
 }
 
 function decodeAbiString(hex) {
@@ -26,7 +24,16 @@ function decodeAbiString(hex) {
   } catch { return ''; }
 }
 
+const metaCache = new Map();
 export async function tokenMeta(address) {
+  const key = address.toLowerCase();
+  if (metaCache.has(key)) return metaCache.get(key);
+  const m = await readMeta(address);
+  metaCache.set(key, m);
+  if (metaCache.size > 5000) metaCache.delete(metaCache.keys().next().value);
+  return m;
+}
+async function readMeta(address) {
   const [code, nameHex, symbolHex] = await Promise.all([
     rpc('eth_getCode', [address, 'latest']),
     rpc('eth_call', [{ to: address, data: '0x06fdde03' }, 'latest']).catch(() => '0x'),
@@ -180,8 +187,8 @@ export async function trending() {
     let l = byAddr.get(address);
     if (!l) {
       // launched before our window: read name/symbol once
-      if (!unknownMeta.has(address)) unknownMeta.set(address, await tokenMeta(address).catch(() => ({ name: '', symbol: '' })));
-      const m = unknownMeta.get(address);
+      if (!unknownMeta.has(address)) { const m = await tokenMeta(address).catch(() => null); if (m) unknownMeta.set(address, m); }
+      const m = unknownMeta.get(address) || { name: '', symbol: '' };
       l = { address, name: m.name || m.symbol, symbol: m.symbol, creator: '', at: null, t: 0, ticker: null };
     }
     const volUsd = tr.reduce((a, x) => a + x.eth * usd, 0);

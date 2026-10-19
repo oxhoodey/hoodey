@@ -32,7 +32,19 @@ export async function radar(rangeHours) {
 }
 
 export const copycatLatest = () => liveOr('copycat:latest', () => live.copycat(null), () => sample.copycatLatest());
-export const copycatScan = (address) => liveOr(`copycat:${address.toLowerCase()}`, () => live.copycat(address), () => sample.copycatScan(address));
+// A scan must show the token that was asked for. In live mode we never swap in a demo token:
+// if the chain read fails, the page gets a clear "try again" message instead.
+export async function copycatScan(address) {
+  if (!useLive()) return sample.copycatScan(address);
+  try {
+    return await cached(`copycat:${address.toLowerCase()}`, () => live.copycat(address));
+  } catch (e) {
+    log.warn(`live copycat scan ${address} failed:`, e.message);
+    const warming = /catching up|Indexer/i.test(e.message);
+    if (/No contract/i.test(e.message)) return null;
+    return { error: warming ? 'HoodEye is still reading the latest blocks after a restart. Try this scan again in a minute.' : `Couldn't read this token from Robinhood Chain right now (${e.message.slice(0, 80)}). Try again in a moment.` };
+  }
+}
 
 export async function clock() {
   if (!useLive()) return sample.clock();

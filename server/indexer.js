@@ -262,5 +262,6 @@ export function status() {
 }
 
 export const isReady = () => state.ready;
+export { rpc as chainRpc }; // with retries, for one-off reads elsewhere
 export const launchOf = (token) => state.launches.get(String(token).toLowerCase()) || null;
 export { isAddress };

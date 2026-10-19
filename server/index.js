@@ -138,7 +138,8 @@ async function api(req, res, url) {
       const a = (q.get('address') || '').trim();
       if (!isAddress(a)) return needAddress();
       const out = await data.copycatScan(a);
-      return out ? json(res, 200, out, cors) : json(res, 404, { error: 'Token not found' }, cors);
+      if (out && out.error) return json(res, 503, out, cors);
+      return out ? json(res, 200, out, cors) : json(res, 404, { error: 'No token contract at this address on Robinhood Chain.' }, cors);
     }
     case '/api/clock':
       if (!f.clock) return off('Market Clock');
