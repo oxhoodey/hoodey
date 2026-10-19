@@ -7,6 +7,7 @@ const VERDICT = { high: 'High cabal risk', medium: 'Some cabal signs', low: 'Loo
 const TAG_ORDER = ['deployer', 'sniper', 'bundle', 'circle', 'crew'];
 const COLORS = { deployer: '#B42318', sniper: '#E2553A', bundle: '#D9A21B', other: '#9DB8A6' };
 
+const X_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17.8 3h3.1l-6.8 7.7L22 21h-6.2l-4.9-6.3L5.3 21H2.2l7.3-8.3L2 3h6.4l4.4 5.8L17.8 3Zm-1.1 16.2h1.7L7.4 4.7H5.6l11.1 14.5Z"/></svg>';
 const fmtEth = (v) => (v == null ? '—' : v === 0 ? '0' : v < 0.001 ? '<0.001' : v.toFixed(v < 1 ? 3 : 2));
 const wallet = (a) => explorerLink(cfg, a, short(a));
 
@@ -58,8 +59,8 @@ function render(d) {
         ${raw(meter(d.score))}
         <ul class="cb-reasons">${raw(d.reasons.length ? d.reasons.map((r) => `<li><b>+${r.pts}</b><span>${esc(r.text)}</span></li>`).join('') : '<li><b>0</b><span>No sniping, bundling or crew activity found in the first minute.</span></li>')}</ul>
         <div class="cb-actions">
-          <button type="button" class="btn btn-primary" id="share-x">Share on X</button>
-          <button type="button" class="btn" id="save-card">Save card</button>
+          <button type="button" class="btn btn-primary" id="share-x">${raw(X_ICON)} Post on X</button>
+          <a class="btn" href="#share-card">See share card</a>
           ${raw(ponsLink(cfg, t.address, 'Pons', 'pons-btn'))}
         </div>
       </section>
@@ -77,6 +78,18 @@ function render(d) {
         ${raw(s.circle || s.crews.length ? `<p class="small muted">${s.circle ? `<b>Deployer circle</b> = wallets that also bought this deployer's earlier launches early. ` : ''}${s.crews.length ? `<b>Crew</b> = a group from the Cabal Map below.` : ''}</p>` : '')}
       </section>
     </div>
+    <section class="panel share-panel" id="share-card" aria-label="Share card">
+      <div class="panel-head"><div style="display: flex; flex-direction: column; gap: 4px"><span class="eyebrow">Share card</span><h2 class="h2">This image shows up when you post the link on X</h2></div></div>
+      <div class="share-wrap">
+        <img class="share-img" src="/og/cabal/${t.address}.png?s=${d.score}-${d.reasons.length}" width="1200" height="630" alt="Cabal Scan card for $${t.symbol}: ${d.score} out of 100, ${VERDICT[d.verdict]}">
+        <div class="share-side">
+          <button type="button" class="btn btn-primary btn-lg" id="share-x2">${raw(X_ICON)} Post on X</button>
+          <a class="btn btn-lg" href="/og/cabal/${t.address}.png?s=${d.score}" download="cabal-scan-${t.symbol}.png">Download image</a>
+          <button type="button" class="btn btn-lg" id="copy-link">Copy link</button>
+          <p class="small muted">The post links to this scan. X turns the link into the card on the left, so followers see the score without clicking.</p>
+        </div>
+      </div>
+    </section>
     <section class="panel" aria-label="Wallets">
       <div class="panel-head"><h2 class="h2">Wallets behind $${t.symbol}</h2><span class="small muted">Flagged wallets first · % of the 1B supply</span></div>
       <div class="table-scroll"><div class="ttable" role="table" style="min-width: 860px">
@@ -94,55 +107,17 @@ function render(d) {
     </section>`;
   $('result').querySelectorAll('[data-src]').forEach((el) => sourceBadge(el, d));
   const pageUrl = `${location.origin}/cabal?address=${t.address}`;
-  $('share-x').addEventListener('click', () => {
+  const post = () => {
     const top = d.reasons.slice(0, 2).map((r) => '• ' + r.text).join('\n');
     const text = `Cabal Scan on $${t.symbol}: ${d.score}/100 (${VERDICT[d.verdict]})\n${top}\n\nvia ${cfg.APP_NAME}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(pageUrl)}`, '_blank', 'noopener');
+    window.open(`https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(pageUrl)}`, '_blank', 'noopener');
+  };
+  $('share-x').addEventListener('click', post);
+  $('share-x2').addEventListener('click', post);
+  $('copy-link').addEventListener('click', async (e) => {
+    try { await navigator.clipboard.writeText(pageUrl); e.target.textContent = 'Link copied'; } catch { prompt('Copy this link', pageUrl); }
+    setTimeout(() => { e.target.textContent = 'Copy link'; }, 1800);
   });
-  $('save-card').addEventListener('click', () => saveCard(d));
-}
-
-// ── share card: a 1200×630 PNG drawn on canvas ───────────────────────────
-async function saveCard(d) {
-  const c = document.createElement('canvas');
-  c.width = 1200; c.height = 630;
-  const g = c.getContext('2d');
-  const col = { high: '#D93A1F', medium: '#C88A0A', low: '#00A804' }[d.verdict];
-  g.fillStyle = '#FFFFFF'; g.fillRect(0, 0, 1200, 630);
-  g.fillStyle = '#F3F8F4';
-  for (let y = 20; y < 630; y += 22) for (let x = 20; x < 1200; x += 22) g.fillRect(x, y, 2, 2);
-  g.fillStyle = col; g.fillRect(0, 0, 1200, 10);
-  const font = (w, s, fam = "'Funnel Display', 'Funnel Sans', system-ui, sans-serif") => `${w} ${s}px ${fam}`;
-  g.fillStyle = '#067A2E'; g.font = font(500, 22, "'Spline Sans Mono', monospace"); g.fillText('CABAL SCAN · HOODEYE', 70, 80);
-  g.fillStyle = '#0E1F15'; g.font = font(700, 64); g.fillText('$' + d.token.symbol, 70, 160);
-  g.fillStyle = '#5B6E61'; g.font = font(500, 26, "'Funnel Sans', system-ui, sans-serif"); g.fillText((d.token.name || '').slice(0, 40), 70, 200);
-  g.fillStyle = col; g.font = font(700, 200); g.fillText(String(d.score), 70, 420);
-  const sw = g.measureText(String(d.score)).width;
-  g.fillStyle = '#9DB8A6'; g.font = font(600, 54); g.fillText('/100', 80 + sw, 420);
-  g.fillStyle = col; g.font = font(700, 34); g.fillText(VERDICT[d.verdict], 74, 480);
-  g.fillStyle = '#EAF2EC'; g.fillRect(70, 510, 460, 14); g.fillStyle = col; g.fillRect(70, 510, 460 * d.score / 100, 14);
-  g.font = font(500, 26, "'Funnel Sans', system-ui, sans-serif");
-  const lines = d.reasons.slice(0, 5);
-  lines.forEach((r, i) => {
-    const y = 290 + i * 62;
-    g.fillStyle = col; g.fillRect(620, y - 20, 8, 8);
-    g.fillStyle = '#0E1F15';
-    let txt = r.text;
-    while (g.measureText(txt).width > 500 && txt.length > 4) txt = txt.slice(0, -2);
-    if (txt !== r.text) txt = txt.replace(/\s*\S*$/, '') + '…';
-    g.fillText(txt, 646, y - 8);
-  });
-  if (!lines.length) { g.fillStyle = '#0E1F15'; g.fillText('No sniping, bundling or crews found.', 620, 290); }
-  g.fillStyle = '#5B6E61'; g.font = font(500, 22, "'Spline Sans Mono', monospace");
-  g.fillText(`${location.host}/cabal`, 70, 590);
-  g.fillText('Heuristics, not proof. Not financial advice.', 620, 590);
-  c.toBlob((blob) => {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `cabal-scan-${d.token.symbol || 'token'}.png`;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-  }, 'image/png');
 }
 
 async function run(address) {

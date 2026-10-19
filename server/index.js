@@ -7,6 +7,7 @@ import { log, isAddress } from './util.js';
 import * as data from './data.js';
 import { startAlerts } from './alerts.js';
 import { tokenImage } from './images.js';
+import { cabalCard } from './ogcard.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PUBLIC = path.join(ROOT, 'public');
@@ -84,13 +85,18 @@ function themeStyle() {
   return `<style>:root{--accent:${config.THEME_ACCENT};--accent-ink:${config.THEME_ACCENT_INK};--bg:${config.THEME_BG};}</style>`;
 }
 
-async function renderPage(res, file, pathname) {
+async function renderPage(req, res, file, pathname, url) {
   let html = await fs.readFile(path.join(PUBLIC, file), 'utf8');
   const base = config.PUBLIC_URL ? config.PUBLIC_URL.replace(/\/$/, '') : '';
+  // absolute URL for previews: PUBLIC_URL, or the host the request came in on
+  const origin = base || `${String(req.headers['x-forwarded-proto'] || 'https').split(',')[0]}://${req.headers.host}`;
+  const addr = url && url.searchParams.get('address');
+  const ogImage = pathname === '/cabal' && isAddress(addr || '') ? `${origin}/og/cabal/${addr.toLowerCase()}.png` : `${origin}/assets/og-default.png`;
   html = html
     .replaceAll('{{APP_NAME}}', escHtml(config.APP_NAME))
     .replaceAll('{{APP_TAGLINE}}', escHtml(config.APP_TAGLINE))
     .replaceAll('{{CANONICAL}}', escHtml(base + pathname))
+    .replaceAll('{{OG_IMAGE}}', escHtml(ogImage))
     .replace('{{THEME_STYLE}}', themeStyle());
   send(res, 200, html, { 'Content-Type': MIME['.html'], 'Cache-Control': 'no-cache' });
 }
@@ -114,6 +120,18 @@ async function serveStatic(req, res, pathname) {
   } catch {
     return false;
   }
+}
+
+// Share cards are cached briefly so a burst of X previews doesn't redraw the same PNG.
+const ogStore = new Map();
+function ogCache(token, scan, host) {
+  const key = `${token}:${scan.score}:${scan.reasons.length}`;
+  const hit = ogStore.get(key);
+  if (hit) return hit;
+  const buf = cabalCard(scan, host);
+  ogStore.set(key, buf);
+  if (ogStore.size > 200) ogStore.delete(ogStore.keys().next().value);
+  return buf;
 }
 
 // ── API ────────────────────────────────────────────────────────────────
@@ -190,6 +208,14 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { ok: true, mode: config.DATA_MODE, source: config.DATA_SOURCE, liveReady: config.liveReady, uptimeSec: Math.round((Date.now() - startedAt) / 1000), chain: await data.chainStatus().catch(() => ({})) });
     }
     if (p.startsWith('/api/')) return await api(req, res, url);
+    if (p.startsWith('/og/cabal/')) {
+      const token = p.slice(10).replace(/\.png$/, '');
+      if (!isAddress(token)) return send(res, 404, '');
+      const out = await data.cabalScan(token);
+      if (!out || out.error) return send(res, 404, '', { 'Cache-Control': 'public, max-age=60' });
+      const host = (config.PUBLIC_URL ? config.PUBLIC_URL.replace(/^https?:\/\//, '') : String(req.headers.host || '')).replace(/\/$/, '');
+      return send(res, 200, ogCache(token, out, host), { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=300', 'Content-Security-Policy': "default-src 'none'; sandbox" });
+    }
     if (p.startsWith('/img/')) {
       const token = p.slice(5);
       const img = isAddress(token) ? await tokenImage(token, data.imageUrlOf(token)) : null;
@@ -206,7 +232,7 @@ const server = http.createServer(async (req, res) => {
         if (p === '/' && first) return send(res, 302, '', { Location: first[0] });
         return send(res, 404, 'Not found', { 'Content-Type': 'text/plain' });
       }
-      return await renderPage(res, page.file, p === '/' ? '/' : p);
+      return await renderPage(req, res, page.file, p === '/' ? '/' : p, url);
     }
     if (await serveStatic(req, res, url.pathname)) return;
     send(res, 404, 'Not found', { 'Content-Type': 'text/plain; charset=utf-8' });

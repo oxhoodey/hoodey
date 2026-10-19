@@ -805,3 +805,10 @@ h1, h2, .display, .big, .brand-name, .fx-big, .lx-count b, .pulse .v, .stat .v, 
 .cb-bundle { display: grid; grid-template-columns: 36px 110px minmax(0, 1fr); gap: 10px; align-items: center; padding: 8px 12px; border-radius: var(--leaf-sm); background: #FFFAEE; box-shadow: inset 0 0 0 1px #F2E1B5; font-size: 12px; }
 .cb-bundle b { color: #8A5A00; font-family: var(--mono-f); }
 .cb-bundle .mono { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+
+.share-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 22px; align-items: start; }
+.share-img { width: 100%; height: auto; display: block; border-radius: var(--leaf); box-shadow: 0 0 0 1px var(--line), 0 18px 40px -26px rgba(14, 31, 21, 0.35); background: #fff; }
+.share-side { display: flex; flex-direction: column; gap: 10px; }
+.share-side .btn { width: 100%; }
+.btn svg { flex: none; }
+@media (max-width: 900px) { .share-wrap { grid-template-columns: 1fr; } }

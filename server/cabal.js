@@ -198,14 +198,14 @@ export function scanToken(token, launch, launches, trades, map) {
   // score: each signal adds weight; capped at 100
   const reasons = [];
   let score = 0;
-  const add = (pts, text) => { score += pts; reasons.push({ pts, text }); };
-  if (stats.snipers) add(Math.min(25, 6 + stats.snipers * 3), `${stats.snipers} wallet${stats.snipers > 1 ? 's' : ''} bought in the first ${sniperSec}s`);
-  if (stats.bundles) add(Math.min(25, 10 + stats.bundledWallets * 2), `${stats.bundledWallets} wallets bought in the same block (${stats.bundles} bundle${stats.bundles > 1 ? 's' : ''})`);
-  if (stats.deployerBought) add(15, 'The deployer bought its own token');
-  if (stats.circle) add(Math.min(20, 8 + stats.circle * 3), `${stats.circle} early buyer${stats.circle > 1 ? 's' : ''} also bought this deployer's earlier launches`);
-  if (crewsHere.length) add(Math.min(25, 15 + crewsHere.length * 5), `Known crew${crewsHere.length > 1 ? 's' : ''} inside: ${crewsHere.join(', ')}`);
-  if (stats.flaggedHoldPct >= 10) add(Math.min(20, Math.round(stats.flaggedHoldPct / 2)), `Flagged wallets still hold ${stats.flaggedHoldPct.toFixed(1)}% of supply`);
-  if (stats.flaggedExited >= 2) add(10, `${stats.flaggedExited} flagged wallets already sold out`);
+  const add = (pts, text, short) => { score += pts; reasons.push({ pts, text, short }); };
+  if (stats.snipers) add(Math.min(25, 6 + stats.snipers * 3), `${stats.snipers} wallet${stats.snipers > 1 ? 's' : ''} bought in the first ${sniperSec}s`, `${stats.snipers} SNIPERS IN ${sniperSec}S`);
+  if (stats.bundles) add(Math.min(25, 10 + stats.bundledWallets * 2), `${stats.bundledWallets} wallets bought in the same block (${stats.bundles} bundle${stats.bundles > 1 ? 's' : ''})`, `${stats.bundledWallets} WALLETS BUNDLED`);
+  if (stats.deployerBought) add(15, 'The deployer bought its own token', 'DEPLOYER BOUGHT IN');
+  if (stats.circle) add(Math.min(20, 8 + stats.circle * 3), `${stats.circle} early buyer${stats.circle > 1 ? 's' : ''} also bought this deployer's earlier launches`, `${stats.circle} DEPLOYER FRIENDS`);
+  if (crewsHere.length) add(Math.min(25, 15 + crewsHere.length * 5), `Known crew${crewsHere.length > 1 ? 's' : ''} inside: ${crewsHere.join(', ')}`, crewsHere.length > 1 ? `${crewsHere.length} KNOWN CREWS IN` : `${crewsHere[0]} INSIDE`);
+  if (stats.flaggedHoldPct >= 10) add(Math.min(20, Math.round(stats.flaggedHoldPct / 2)), `Flagged wallets still hold ${stats.flaggedHoldPct.toFixed(1)}% of supply`, `FLAGGED HOLD ${Math.round(stats.flaggedHoldPct)}%`);
+  if (stats.flaggedExited >= 2) add(10, `${stats.flaggedExited} flagged wallets already sold out`, `${stats.flaggedExited} ALREADY SOLD OUT`);
   score = Math.min(100, score);
   const verdict = score >= 60 ? 'high' : score >= 30 ? 'medium' : 'low';
 
