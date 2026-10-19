@@ -1,9 +1,8 @@
-// Heat Core: the "Hot right now" board as a field of glowing token orbs.
-//   size  = the metric chosen in "Size by" (volume by default)
-//   place = rank: the hottest token sits in the core, cooler ones drift outward
-//   glow  = price change in the window (green up, orange down)
-//   ring  = buy pressure (green share = buys)
-//   red dot = at least one red flag
+// Heat map: the "Hot right now" board as treemap tiles, like a stock market heat map.
+//   tile area = the metric chosen in "Size by" (volume by default)
+//   colour    = price change in the window (green up, orange/red down, grey flat)
+//   bottom bar = buy pressure (green share = buys)
+//   red corner = at least one red flag
 import { html, raw, esc, fmtUsd, fmtInt, fmtPct, timeAgo, avatar, ponsLink } from './common.js';
 
 const reduceMotion = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -26,60 +25,56 @@ export const METRICS = {
   new: { label: 'freshness', of: (r) => (r.launchedAt ? Math.max(0, 1 - (Date.now() - Date.parse(r.launchedAt)) / (6 * 3600e3)) : 0) }
 };
 
-// Circle packing: start on a golden-angle spiral by rank, then relax overlaps while pulling toward the core.
-function layout(rows, metric, W, H) {
-  const n = rows.length;
-  if (!n) return [];
-  const vals = rows.map((r) => METRICS[metric].of(r));
-  const max = Math.max(...vals, 1e-9);
-  const w = vals.map((v) => 0.32 + 0.68 * Math.sqrt(Math.max(0, v) / max));
-  const area = W * H * (n < 6 ? 0.22 : 0.36);
-  const s = Math.sqrt(area / (Math.PI * w.reduce((a, x) => a + x * x, 0)));
-  const rMax = Math.min(W, H) * 0.2, rMin = Math.max(16, Math.min(W, H) * 0.045);
-  const cx = W / 2, cy = H / 2;
-  const sx = Math.max(1, W / H) ** 0.6; // spread wider than tall on wide stages
-  const nodes = rows.map((row, i) => {
-    const r = Math.max(rMin, Math.min(rMax, s * w[i]));
-    const a = i * 2.39996, d = s * 0.95 * Math.sqrt(i);
-    return { row, r, x: cx + Math.cos(a) * d * sx, y: cy + Math.sin(a) * d / sx, rank: i };
-  });
-  const pad = Math.max(6, Math.min(W, H) * 0.014);
-  for (let it = 0; it < 260; it++) {
-    const pull = 0.012 * (1 - it / 300);
-    for (const a of nodes) {
-      const k = pull * (1.6 - Math.min(1, a.rank / n)); // hotter = stronger pull to the core
-      a.x += (cx - a.x) * k / sx;
-      a.y += (cy - a.y) * k * sx;
-    }
-    for (let i = 0; i < n; i++) {
-      for (let j = i + 1; j < n; j++) {
-        const a = nodes[i], b = nodes[j];
-        let dx = b.x - a.x, dy = b.y - a.y;
-        let dist = Math.hypot(dx, dy) || 0.01;
-        const min = a.r + b.r + pad;
-        if (dist < min) {
-          const push = (min - dist) / 2;
-          dx /= dist; dy /= dist;
-          // the hotter orb moves less
-          const wa = a.rank < b.rank ? 0.35 : 0.65, wb = 1 - wa;
-          a.x -= dx * push * wa * 2; a.y -= dy * push * wa * 2;
-          b.x += dx * push * wb * 2; b.y += dy * push * wb * 2;
-        }
-      }
-    }
-    for (const a of nodes) {
-      a.x = Math.max(a.r + 4, Math.min(W - a.r - 4, a.x));
-      a.y = Math.max(a.r + 4, Math.min(H - a.r - 22, a.y));
+// Squarified treemap (Bruls et al.): rows of tiles kept close to square so labels stay readable.
+function treemap(items, x, y, w, h) {
+  const out = [];
+  const total = items.reduce((a, it) => a + it.v, 0) || 1;
+  let rest = items.map((it) => ({ ...it, a: (it.v / total) * w * h }));
+  let rx = x, ry = y, rw = w, rh = h;
+  const worst = (row, side) => {
+    const sum = row.reduce((a, r) => a + r.a, 0);
+    const max = Math.max(...row.map((r) => r.a)), min = Math.min(...row.map((r) => r.a));
+    return Math.max((side * side * max) / (sum * sum), (sum * sum) / (side * side * min));
+  };
+  while (rest.length) {
+    const side = Math.min(rw, rh);
+    const row = [rest[0]];
+    let i = 1;
+    while (i < rest.length && worst([...row, rest[i]], side) <= worst(row, side)) { row.push(rest[i]); i++; }
+    rest = rest.slice(i);
+    const sum = row.reduce((a, r) => a + r.a, 0);
+    if (rw >= rh) { // lay the row as a column on the left
+      const cw = sum / rh;
+      let cy = ry;
+      for (const r of row) { const ch = r.a / cw; out.push({ ...r, x: rx, y: cy, w: cw, h: ch }); cy += ch; }
+      rx += cw; rw -= cw;
+    } else { // lay the row along the top
+      const ch = sum / rw;
+      let cx = rx;
+      for (const r of row) { const cw = r.a / ch; out.push({ ...r, x: cx, y: ry, w: cw, h: ch }); cx += cw; }
+      ry += ch; rh -= ch;
     }
   }
-  return nodes;
+  return out;
 }
 
-function glowOf(r) {
+function layout(rows, metric, W, H) {
+  const vals = rows.map((r) => Math.max(0, METRICS[metric].of(r)));
+  const max = Math.max(...vals, 1e-9);
+  // keep small tokens visible: every tile gets at least a sliver of area
+  const items = rows.map((row, i) => ({ row, rank: i, v: Math.max(vals[i], max * 0.035) }));
+  items.sort((a, b) => b.v - a.v);
+  return treemap(items, 0, 0, W, H);
+}
+
+// Colour by price move: tint strength grows with the size of the move, capped at ±40%.
+function colorOf(r) {
   const c = r.changePct;
-  if (c == null) return 'rgba(86, 104, 91, 0.25)';
-  const k = Math.min(1, Math.abs(c) / 60);
-  return c >= 0 ? `rgba(0, 200, 5, ${(0.18 + 0.5 * k).toFixed(2)})` : `rgba(240, 120, 70, ${(0.18 + 0.5 * k).toFixed(2)})`;
+  if (c == null || Math.abs(c) < 0.5) return { bg: '#EEF3EF', ink: 'var(--ink)', strong: false };
+  const k = Math.min(1, Math.abs(c) / 40);
+  const strong = k > 0.45;
+  if (c > 0) return { bg: `hsl(124 ${Math.round(55 + 35 * k)}% ${Math.round(90 - 52 * k)}%)`, ink: strong ? '#FFFFFF' : '#0B4A1D', strong };
+  return { bg: `hsl(${Math.round(18 - 10 * k)} ${Math.round(70 + 20 * k)}% ${Math.round(91 - 42 * k)}%)`, ink: strong ? '#FFFFFF' : '#7A2A0C', strong };
 }
 
 function bigSpark(vals, up) {
@@ -96,7 +91,7 @@ function bigSpark(vals, up) {
 }
 
 export function createHotField({ stage, focus, cfg, onOpen }) {
-  const orbs = new Map(); // address -> element
+  const orbs = new Map(); // address -> tile element
   let rows = [], metric = 'volume', selected = null, pinned = false, lastSize = '';
 
   function renderFocus(r, rank) {
@@ -140,56 +135,66 @@ export function createHotField({ stage, focus, cfg, onOpen }) {
     const W = stage.clientWidth, H = stage.clientHeight;
     if (!W || !H) return;
     lastSize = `${W}x${H}`;
-    const nodes = layout(rows, metric, W, H);
-    const keep = new Set(nodes.map((n) => n.row.address));
+    const tiles = layout(rows, metric, W, H);
+    const keep = new Set(tiles.map((t) => t.row.address));
     for (const [a, el] of orbs) {
-      if (!keep.has(a)) { el.classList.add('out'); setTimeout(() => el.remove(), 450); orbs.delete(a); }
+      if (!keep.has(a)) { el.classList.add('out'); setTimeout(() => el.remove(), 400); orbs.delete(a); }
     }
-    nodes.forEach((n, i) => {
-      const r = n.row;
+    const gap = W < 520 ? 3 : 5;
+    for (const t of tiles) {
+      const r = t.row;
       let el = orbs.get(r.address);
       const fresh = !el;
       if (fresh) {
         el = document.createElement('button');
         el.type = 'button';
-        el.className = 'orb in';
         el.dataset.a = r.address;
-        el.style.transform = `translate(${W / 2 - n.r}px, ${H / 2 - n.r}px) scale(0.2)`;
         stage.appendChild(el);
         orbs.set(r.address, el);
-        requestAnimationFrame(() => el.classList.remove('in'));
+        requestAnimationFrame(() => requestAnimationFrame(() => el.classList.remove('in')));
       }
+      const w = Math.max(0, t.w - gap), h = Math.max(0, t.h - gap);
+      const size = w > 220 && h > 140 ? 'xl' : w > 150 && h > 96 ? 'lg' : w > 84 && h > 80 ? 'md' : 'sm';
+      // text scales with the tile so it never spills over the edge
+      el.style.setProperty('--fchg', Math.max(10, Math.min({ xl: 34, lg: 24, md: 15, sm: 11 }[size], w / 7.2)).toFixed(1) + 'px');
+      el.style.setProperty('--fsym', Math.max(10, Math.min({ xl: 20, lg: 15, md: 14, sm: 11 }[size], w / 8)).toFixed(1) + 'px');
+      const flagText = w >= 210;
+      const col = colorOf(r);
       const up = (r.changePct ?? 0) >= 0;
-      const d = Math.round(n.r * 2);
-      el.style.setProperty('--d', d + 'px');
+      el.style.left = (t.x + gap / 2).toFixed(1) + 'px';
+      el.style.top = (t.y + gap / 2).toFixed(1) + 'px';
+      el.style.width = w.toFixed(1) + 'px';
+      el.style.height = h.toFixed(1) + 'px';
+      el.style.setProperty('--tbg', col.bg);
+      el.style.setProperty('--tink', col.ink);
       el.style.setProperty('--bp', (r.buyPct ?? 50) + '%');
-      el.style.setProperty('--glow', glowOf(r));
-      el.style.setProperty('--delay', (i * 0.37 % 4).toFixed(2) + 's');
-      el.style.zIndex = String(100 - i);
-      el.classList.toggle('flagged', r.flags.length > 0);
-      el.classList.toggle('down', !up);
-      el.classList.toggle('small', d < 78);
-      el.setAttribute('aria-label', `#${i + 1} ${r.name || r.symbol}, ${fmtUsd(r.volumeUsd)} volume, ${r.changePct == null ? 'no price change' : fmtPct(r.changePct)}${r.flags.length ? ', ' + r.flags.length + ' red flag(s)' : ''}`);
-      el.innerHTML = `<span class="orb-body"><span class="orb-ring"></span><span class="orb-core">${avatar(r)}</span>${r.flags.length ? '<i class="orb-flag" aria-hidden="true"></i>' : ''}</span>
-        <span class="orb-tag"><b>$${esc(r.symbol || '?')}</b><em class="${up ? 'up' : 'down'}">${r.changePct == null ? '' : esc(fmtPct(r.changePct))}</em></span>`;
-      el.style.transform = `translate(${(n.x - n.r).toFixed(1)}px, ${(n.y - n.r).toFixed(1)}px)`;
-      if (fresh && reduceMotion) el.classList.remove('in');
-    });
+      el.className = `tile ${size}${fresh && !reduceMotion ? ' in' : ''}${col.strong ? ' strong' : ''}${r.flags.length ? ' flagged' : ''}${r.address === selected ? ' on' : ''}`;
+      el.setAttribute('aria-label', `#${t.rank + 1} ${r.name || r.symbol}, ${fmtUsd(r.volumeUsd)} volume, ${r.changePct == null ? 'no price change' : fmtPct(r.changePct)}${r.flags.length ? ', ' + r.flags.length + ' red flag(s)' : ''}`);
+      const chg = r.changePct == null ? '—' : fmtPct(r.changePct);
+      el.classList.toggle('tiny', w < 40 || h < 30);
+      el.innerHTML = size === 'sm'
+        ? `<span class="t-sym">${esc(r.symbol || '?')}</span><span class="t-chg">${esc(chg)}</span>${r.flags.length ? '<i class="t-flag" aria-hidden="true"></i>' : ''}<span class="t-bp" aria-hidden="true"></span>`
+        : `<span class="t-top">${size === 'md' ? '' : avatar(r)}<span class="t-id"><span class="t-sym">$${esc(r.symbol || '?')}</span>${size === 'xl' ? `<span class="t-name">${esc(r.name || '')}</span>` : ''}</span></span>
+           <span class="t-chg">${up && r.changePct ? '▲' : r.changePct ? '▼' : ''} ${esc(chg)}</span>
+           <span class="t-vol">${esc(fmtUsd(r.volumeUsd))}${size === 'xl' || size === 'lg' ? ' vol · ' + esc(fmtInt(r.traders)) + ' traders' : ''}</span>
+           ${r.flags.length ? `<i class="t-flag${flagText ? '' : ' mini'}" aria-hidden="true">${flagText ? esc(r.flags[0].label) : ''}</i>` : ''}
+           <span class="t-bp" aria-hidden="true"></span>`;
+    }
     if (!rows.find((r) => r.address === selected) || !pinned) select(rows[0] && rows[0].address);
     else select(selected);
   }
 
   stage.addEventListener('click', (e) => {
-    const b = e.target.closest('.orb');
+    const b = e.target.closest('.tile');
     if (!b) return;
     select(b.dataset.a, true);
     if (matchMedia('(max-width: 900px)').matches) focus.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'nearest' });
   });
   stage.addEventListener('pointerover', (e) => {
-    const b = e.target.closest('.orb');
+    const b = e.target.closest('.tile');
     if (b && !pinned && matchMedia('(hover: hover)').matches) select(b.dataset.a);
   });
-  stage.addEventListener('dblclick', (e) => { const b = e.target.closest('.orb'); if (b) onOpen && onOpen(b.dataset.a); });
+  stage.addEventListener('dblclick', (e) => { const b = e.target.closest('.tile'); if (b) onOpen && onOpen(b.dataset.a); });
 
   let t;
   new ResizeObserver(() => {

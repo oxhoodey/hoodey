@@ -59,14 +59,14 @@
 <section class="panel hotx" id="hot-board" aria-label="Hot right now">
   <div class="panel-head" style="align-items: flex-end">
     <div style="display: flex; flex-direction: column; gap: 4px">
-      <span class="eyebrow">Trader board · Heat core</span>
+      <span class="eyebrow">Trader board · Heat map</span>
       <h2 style="font-size: 30px; font-weight: 700; letter-spacing: -0.02em">Hot right now</h2>
       <span class="small muted" id="hot-sub">Most traded Pons tokens, checked for red flags.</span>
     </div>
     <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; max-width: 100%; min-width: 0">
       <span class="src" id="src-trending" hidden></span>
       <div class="segmented seg-sm" role="group" aria-label="View" id="hot-view">
-        <button type="button" data-v="field">Heat core</button>
+        <button type="button" data-v="field">Heat map</button>
         <button type="button" data-v="list">List</button>
       </div>
     </div>
@@ -91,16 +91,15 @@
     </div>
   </div>
   <div class="hotx-stage" id="hot-field-wrap">
-    <div class="hotx-field" id="hot-field" aria-label="Hot tokens. Bigger orbs have more volume; the hottest sit in the core."><span class="hotx-core" aria-hidden="true"></span></div>
+    <div class="hotx-field" id="hot-field" aria-label="Hot tokens as a heat map. Bigger tiles have more volume; colour shows the price move."></div>
     <aside class="hotx-focus" id="hot-focus" aria-live="polite"><div class="skel" style="min-height: 320px"></div></aside>
   </div>
-  <ul class="hotx-legend" aria-label="How to read the heat core">
-    <li><i class="lg-size"></i>Size = <b id="legend-size">volume</b></li>
-    <li><i class="lg-core"></i>Closer to the core = hotter</li>
-    <li><i class="lg-glow"></i>Glow = price change (green up, orange down)</li>
-    <li><i class="lg-ring"></i>Ring = buy pressure</li>
-    <li><i class="lg-flag"></i>Red dot = red flag</li>
-  </ul>
+  <div class="hotx-legend" aria-label="How to read the heat map">
+    <span>Tile size = <b id="legend-size">volume</b></span>
+    <span class="lg-scale" aria-label="Colour = price change"><em>−40%</em><i style="background: hsl(8 90% 49%)"></i><i style="background: hsl(14 80% 70%)"></i><i style="background: #EEF3EF"></i><i style="background: hsl(124 72% 64%)"></i><i style="background: hsl(124 90% 38%)"></i><em>+40%</em></span>
+    <span><i class="lg-bp"></i>Bottom bar = buy pressure</span>
+    <span><i class="lg-flag"></i>Red tag = red flag</span>
+  </div>
   <div class="table-scroll" id="hot-list" hidden><div class="ttable" style="min-width: 980px" role="table" aria-label="Hot Pons tokens" id="hot-rows"></div></div>
   <p class="note">Buy pressure = share of volume from buys. Top wallet = share of volume from the single biggest trader. Flags are heuristics, not proof. Not financial advice.</p>
 </section>
