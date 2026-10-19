@@ -8,14 +8,14 @@ const ICONS = {
   cabal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="6" cy="7" r="2.5"/><circle cx="18" cy="7" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M8.3 8.2 L10.6 15.8 M15.7 8.2 L13.4 15.8 M8.5 7 H15.5"/></svg>',
   xray: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 6.5 V17.5 M8.5 9 H15.5 M8 12 H16 M8.5 15 H15.5"/></svg>',
   larp: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9c0-3 3.5-5 8-5s8 2 8 5c0 5-3.5 10-8 11-4.5-1-8-6-8-11Z"/><path d="M8 10.5c.8-.7 1.8-.7 2.6 0M13.4 10.5c.8-.7 1.8-.7 2.6 0M9.5 15c1.5 1 3.5 1 5 0"/></svg>',
-  radar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 12 L19 5"/></svg>',
+  radar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l2.5-6 4 12 2.5-6H21"/></svg>',
   copycat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="11" height="11" rx="2"/><rect x="10" y="10" width="11" height="11" rx="2"/></svg>',
   clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7 V12 L15.5 14"/></svg>',
   family: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M12 7.5 V12 M12 12 L5 16.5 M12 12 L19 16.5"/></svg>',
   roadmap: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 21 V4 H17 L15 8 L17 12 H5"/></svg>'
 };
 const NAV = [
-  { key: 'radar', href: '/', label: 'Radar' },
+  { key: 'radar', href: '/', label: 'Live' },
   { key: 'copycat', href: '/copycat', label: 'Copycat' },
   { key: 'cabal', href: '/cabal', label: 'Cabal' },
   { key: 'xray', href: '/xray', label: 'X-Ray' },
