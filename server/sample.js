@@ -3,6 +3,7 @@
 import { config } from './config.js';
 import { hashString, seededRandom, isAddress } from './util.js';
 import { buildMap, scanToken } from './cabal.js';
+import { linkIndex, scanLarp, larpBoard as buildLarpBoard } from './larp.js';
 import { buildModel, forecast, deathRow, xrayWallet, walletBoard } from './insight.js';
 
 
@@ -78,7 +79,8 @@ export function radar(rangeHours) {
     latest: LATEST.map((l, i) => {
       const med = [4, 11, 26, 7, 48, 15][i % 6];
       const t = Date.parse(l.launchedAt || l.at || ago(5));
-      return { ...l, death: { status: i === 3 ? 'overtime' : 'alive', medianLifeMin: med, expectedDeathAt: new Date((isNaN(t) ? Date.now() : t) + med * MIN).toISOString(), diedPct: [92, 81, 64, 88, 41, 70][i % 6] } };
+      const larp = [null, { kind: 'famous', label: 'Uses @tesla' }, null, null, { kind: 'reused', label: '@stratallm taken from $STRATA' }, { kind: 'tweet', label: 'Links a tweet by @elonmusk' }][i % 6];
+      return { ...l, larp, death: { status: i === 3 ? 'overtime' : 'alive', medianLifeMin: med, expectedDeathAt: new Date((isNaN(t) ? Date.now() : t) + med * MIN).toISOString(), diedPct: [92, 81, 64, 88, 41, 70][i % 6] } };
     }),
     // last hour of launches for the launch tape (demo: 61 points)
     timeline: Array.from({ length: 61 }, (_, i) => {
@@ -321,4 +323,37 @@ export function xrayBoard() {
   const lives = dead.map((x) => x.lifeMin).sort((p, q) => p - q);
   return { source: 'sample', windowHours: 6, deathRow: deathRow(m), ...walletBoard(m),
     stats: { launches: m.tokens.size, dead: dead.length, deadPct: Math.round((dead.length / m.tokens.size) * 100), medianLifeMin: lives.length ? lives[Math.floor(lives.length / 2)] : null, learningFrom: m.resolved.length } };
+}
+
+// ── LARP Scanner demo: the simulated launches get socials, some borrowed ──
+function larpWorld() {
+  const W = world();
+  if (!W.larp) {
+    const launches = W.launches.map((l, i) => {
+      const k = i % 6;
+      const x = k === 0 ? 'https://x.com/elonmusk' : k === 1 ? 'https://x.com/hoodfrog_eth' : k === 2 ? `https://x.com/${l.symbol.toLowerCase()}_onhood` : k === 3 ? 'https://x.com/tesla/status/1849000000000000001' : k === 4 ? 'https://x.com/i/communities/1840000000000000077' : null;
+      const website = k === 0 ? 'https://tesla.com' : k === 1 ? 'https://hoodfrog.xyz' : k === 2 ? `https://${l.symbol.toLowerCase()}.fun` : null;
+      const telegram = k === 1 ? 'https://t.me/hoodfrog' : null;
+      return { ...l, links: { x, website, telegram } };
+    });
+    W.larp = { launches, idx: linkIndex(launches) };
+  }
+  return W.larp;
+}
+
+export async function larpScan(address) {
+  if (!isAddress(address)) return null;
+  const L = larpWorld();
+  const a = address.toLowerCase();
+  const known = L.launches.find((l) => l.address === a);
+  const sorted = L.launches.slice().sort((p, q) => p.t - q.t);
+  const l = known || sorted.filter((x) => x.links.x === 'https://x.com/hoodfrog_eth')[1] || sorted[0];
+  const r = await scanLarp(l, L.launches, L.idx, { profile: false });
+  return { source: 'sample', windowHours: 6, note: known ? undefined : 'Sample mode: this is demo data, not the token at this address.',
+    token: { address: l.address, name: l.name, symbol: l.symbol, hasImage: false, launchedAt: l.at, creator: l.creator }, ...r };
+}
+
+export function larpBoard() {
+  const L = larpWorld();
+  return { source: 'sample', windowHours: 6, ...buildLarpBoard(L.launches, L.idx) };
 }

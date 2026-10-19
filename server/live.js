@@ -6,6 +6,7 @@ import { fetchJson, log, nameSimilarity, zonedParts, toMinutes, median, isAddres
 import * as ix from './indexer.js';
 import { tokenSummary, ethUsd, historyOf, startPriceWatch } from './dexpaprika.js';
 import { buildMap, scanToken } from './cabal.js';
+import { linkIndex, scanLarp, larpBoard, quickFlag } from './larp.js';
 import { buildModel, forecast, deathRow, xrayWallet, walletBoard } from './insight.js';
 
 async function rpc(method, params) {
@@ -165,7 +166,7 @@ export async function radar(rangeHours) {
     themed: recent.filter((l) => l.ticker).length
   };
   const model = insightModel();
-  const withDeath = (l) => { const r = tokenRow(l, all, creatorCounts, null, vol); const f = forecast(model, l.address); if (f) r.death = { status: f.status, medianLifeMin: f.medianLifeMin, expectedDeathAt: f.expectedDeathAt, diedPct: f.diedPct }; return r; };
+  const withDeath = (l) => { const r = tokenRow(l, all, creatorCounts, null, vol); const f = forecast(model, l.address); if (f) r.death = { status: f.status, medianLifeMin: f.medianLifeMin, expectedDeathAt: f.expectedDeathAt, diedPct: f.diedPct }; r.larp = quickFlag(l, larpIndex()); return r; };
   return { source: 'live', moves, events: moves.filter((m) => m.spike), latest: all.slice(0, 16).map(withDeath),
     timeline: all.filter((l) => l.t >= now - 3600e3).slice(0, 400).map((l) => ({ address: l.address, symbol: l.symbol, at: l.at, risk: tokenRow(l, all, creatorCounts, null, null).risk })),
     stats, hot: { source: 'live', items: hot }, errors };
@@ -446,6 +447,31 @@ export async function xrayBoard() {
   const lives = dead.map((x) => x.lifeMin).sort((p, q) => p - q);
   return { source: 'live', windowHours: windowHours(), deathRow: deathRow(model), ...b,
     stats: { launches: model.tokens.size, dead: dead.length, deadPct: model.tokens.size ? Math.round((dead.length / model.tokens.size) * 100) : 0, medianLifeMin: lives.length ? lives[Math.floor(lives.length / 2)] : null, learningFrom: model.resolved.length } };
+}
+
+// ── LARP Scanner ─────────────────────────────────────────────────────────
+let larpCache = { at: 0, v: null };
+function larpIndex() {
+  if (larpCache.v && Date.now() - larpCache.at < 30e3) return larpCache.v;
+  larpCache = { at: Date.now(), v: linkIndex(ix.launches()) };
+  return larpCache.v;
+}
+
+export async function larpScan(address) {
+  const a = address.toLowerCase();
+  const launch = ix.launchOf(a);
+  if (!launch) {
+    const meta = await tokenMeta(a); // throws "No contract" for non-contracts
+    const e = new Error(`$${meta.symbol || 'This token'} launched before the ${config.INDEX_KEEP_HOURS}h window Hoodey keeps, so its launch links are out of reach. LARP Scanner works on Pons launches from the last ${config.INDEX_KEEP_HOURS}h.`);
+    e.code = 'NO_TRADES';
+    throw e;
+  }
+  const r = await scanLarp(launch, ix.launches(), larpIndex());
+  return { source: 'live', windowHours: windowHours(), token: { address: a, name: launch.name, symbol: launch.symbol, hasImage: !!launch.image, launchedAt: launch.at, creator: launch.creator }, ...r };
+}
+
+export async function larpList() {
+  return { source: 'live', windowHours: windowHours(), ...larpBoard(ix.launches(), larpIndex()) };
 }
 
 export { median, isAddress };

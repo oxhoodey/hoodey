@@ -6,6 +6,7 @@ Read-only memecoin intelligence for **Robinhood Chain**. No wallet connection, n
 - **Copycat Eye**: paste a contract and see which older tokens it copies, plus the deployer's track record.
 - **Cabal Eye**: Cabal Scan scores a launch for snipers, same-block bundles and crews; Cabal Map shows wallet crews that buy together.
 - **X-Ray**: paste a token for its **Death Clock** (how long launches born the same way lived) or a wallet for its **Wallet X-Ray** (sniper, crew, farmer, flipper, exit liquidity, with PnL and trader DNA). Both have share cards for X.
+- **LARP Scanner**: flags launches that wear someone else's identity: a famous X account or website, someone's tweet, or links an earlier launch already used. Optional X profile check (age, followers, bio).
 - **Market Clock**: exchange sessions, overnight gaps, and the hours meme waves start.
 - **Narrative Family Tree**: which token came first on a narrative and which ones cloned it.
 - **Wallet Watch**: paste any address to mirror its meme trading.
@@ -120,6 +121,11 @@ Generated from `server/config.js` by `npm run env:example`. 🔒 = secret, never
 | `IMAGE_CACHE_MB` | `64` | Memory the server may use to keep token logos. |
 | `IMAGE_MAX_KB` | `3072` | Largest logo file the server will fetch. |
 | `IMAGE_TIMEOUT_MS` | `8000` | Timeout for fetching one logo. |
+| **LARP Scanner** | | |
+| `LARP_FAMOUS_HANDLES` | `elonmusk,tesla,spacex,xai,grok,x,robinhoodapp,robinhood,vladtenev,nvidia,apple,microsoft,google,openai,sama,anthropicai,cz_binance,binance,coinbase,brian_armstrong,base,jessepollak,vitalikbuterin,ethereum,solana,saylor,strategy,realdonaldtrump,potus,whitehouse,cathiedwood,arkinvest,gamestop,theroaringkitty,ponsfamily,arbitrum` | X accounts that are famous and never a memecoin team (comma separated, no @). A token that links to one of these is flagged as borrowing it. |
+| `LARP_FAMOUS_DOMAINS` | `tesla.com,spacex.com,x.com,twitter.com,x.ai,robinhood.com,nvidia.com,apple.com,microsoft.com,google.com,openai.com,anthropic.com,binance.com,coinbase.com,base.org,ethereum.org,solana.com,strategy.com,whitehouse.gov,gamestop.com,ponsfamily.com,arbitrum.io` | Websites of famous companies (comma separated). A token that lists one of these as its own site is flagged. |
+| `X_PROFILE_API` | `https://api.fxtwitter.com` | Public API used to read an X profile (age, followers, bio) without an X key. Leave empty to skip profile checks. |
+| `X_PROFILE_TIMEOUT_MS` | `5000` | Timeout for one X profile lookup. |
 | **Cabal Eye** | | |
 | `CABAL_EARLY_SECONDS` | `60` | Seconds after launch that count as "early" buying. |
 | `CABAL_SNIPER_SECONDS` | `10` | A first buy within this many seconds of launch is tagged Sniper. |
@@ -160,6 +166,7 @@ Generated from `server/config.js` by `npm run env:example`. 🔒 = secret, never
 | `FEATURE_COPYCAT` | `true` | Show Copycat Eye. |
 | `FEATURE_CABAL` | `true` | Show Cabal Eye (Cabal Scan and Cabal Map). |
 | `FEATURE_XRAY` | `true` | Show X-Ray (Death Clock for tokens, Wallet X-Ray for wallets). |
+| `FEATURE_LARP` | `true` | Show LARP Scanner (tokens that borrow someone else's X account or website). |
 | `FEATURE_CLOCK` | `true` | Show Market Clock. |
 | `FEATURE_FAMILY` | `true` | Show Narrative Family Tree. |
 | `FEATURE_ROADMAP` | `true` | Show Roadmap. |
@@ -181,6 +188,8 @@ All `GET`, JSON, rate-limited per IP (`RATE_LIMIT_PER_MINUTE`).
 | `/api/radar?range=1\|6\|24` | Stock moves, themed launches, hot narratives, lifespans |
 | `/api/copycat/latest` | Newest launch, its matches and deployer |
 | `/api/copycat/scan?address=0x…` | Same, for any contract |
+| `/api/larp/scan?address=0x…` | LARP Scan for a token |
+| `/api/larp/board` | Most borrowed X accounts and the newest LARPs |
 | `/api/xray?address=0x…` | Death Clock (token) or Wallet X-Ray (wallet) |
 | `/api/xray/board` | Death Row, smart money and exit-liquidity wallets |
 | `/og/xray/0x….png` | Share card image for X |

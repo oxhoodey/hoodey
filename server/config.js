@@ -61,6 +61,10 @@ export const VARIABLES = [
   { group: 'Token images', name: 'IMAGE_TIMEOUT_MS', type: 'int', default: 8000, desc: 'Timeout for fetching one logo.' },
 
   // ── Cabal Eye ────────────────────────────────────────────────────────
+  { group: 'LARP Scanner', name: 'LARP_FAMOUS_HANDLES', type: 'string', default: 'elonmusk,tesla,spacex,xai,grok,x,robinhoodapp,robinhood,vladtenev,nvidia,apple,microsoft,google,openai,sama,anthropicai,cz_binance,binance,coinbase,brian_armstrong,base,jessepollak,vitalikbuterin,ethereum,solana,saylor,strategy,realdonaldtrump,potus,whitehouse,cathiedwood,arkinvest,gamestop,theroaringkitty,ponsfamily,arbitrum', desc: 'X accounts that are famous and never a memecoin team (comma separated, no @). A token that links to one of these is flagged as borrowing it.' },
+  { group: 'LARP Scanner', name: 'LARP_FAMOUS_DOMAINS', type: 'string', default: 'tesla.com,spacex.com,x.com,twitter.com,x.ai,robinhood.com,nvidia.com,apple.com,microsoft.com,google.com,openai.com,anthropic.com,binance.com,coinbase.com,base.org,ethereum.org,solana.com,strategy.com,whitehouse.gov,gamestop.com,ponsfamily.com,arbitrum.io', desc: 'Websites of famous companies (comma separated). A token that lists one of these as its own site is flagged.' },
+  { group: 'LARP Scanner', name: 'X_PROFILE_API', type: 'string', default: 'https://api.fxtwitter.com', desc: 'Public API used to read an X profile (age, followers, bio) without an X key. Leave empty to skip profile checks.' },
+  { group: 'LARP Scanner', name: 'X_PROFILE_TIMEOUT_MS', type: 'int', default: 5000, desc: 'Timeout for one X profile lookup.' },
   { group: 'Cabal Eye', name: 'CABAL_EARLY_SECONDS', type: 'int', default: 60, public: true, desc: 'Seconds after launch that count as "early" buying.' },
   { group: 'Cabal Eye', name: 'CABAL_SNIPER_SECONDS', type: 'int', default: 10, public: true, desc: 'A first buy within this many seconds of launch is tagged Sniper.' },
   { group: 'Cabal Eye', name: 'CABAL_EARLY_MAX', type: 'int', default: 25, desc: 'Most early buyers looked at per launch.' },
@@ -105,6 +109,7 @@ export const VARIABLES = [
   { group: 'Features', name: 'FEATURE_COPYCAT', type: 'bool', default: true, public: true, desc: 'Show Copycat Eye.' },
   { group: 'Features', name: 'FEATURE_CABAL', type: 'bool', default: true, public: true, desc: 'Show Cabal Eye (Cabal Scan and Cabal Map).' },
   { group: 'Features', name: 'FEATURE_XRAY', type: 'bool', default: true, public: true, desc: 'Show X-Ray (Death Clock for tokens, Wallet X-Ray for wallets).' },
+  { group: 'Features', name: 'FEATURE_LARP', type: 'bool', default: true, public: true, desc: 'Show LARP Scanner (tokens that borrow someone else\'s X account or website).' },
   { group: 'Features', name: 'FEATURE_CLOCK', type: 'bool', default: true, public: true, desc: 'Show Market Clock.' },
   { group: 'Features', name: 'FEATURE_FAMILY', type: 'bool', default: true, public: true, desc: 'Show Narrative Family Tree.' },
   { group: 'Features', name: 'FEATURE_ROADMAP', type: 'bool', default: true, public: true, desc: 'Show Roadmap.' },
@@ -175,6 +180,8 @@ const { values, warnings } = loadValues();
 export const config = {
   ...values,
   stocks: parseStocks(values.STOCK_TOKENS),
+  famousHandles: new Set(String(values.LARP_FAMOUS_HANDLES || '').split(',').map((x) => x.trim().replace(/^@/, '').toLowerCase()).filter(Boolean)),
+  famousDomains: new Set(String(values.LARP_FAMOUS_DOMAINS || '').split(',').map((x) => x.trim().replace(/^www\./, '').toLowerCase()).filter(Boolean)),
   keywords: parseKeywords(values.STOCK_KEYWORDS),
   holidays: String(values.MARKET_HOLIDAYS).split(',').map((s) => s.trim()).filter((s) => /^\d{4}-\d{2}-\d{2}$/.test(s)),
   corsOrigins: String(values.CORS_ORIGINS).split(',').map((s) => s.trim()).filter(Boolean),
@@ -197,6 +204,7 @@ export function publicConfig() {
       copycat: config.FEATURE_COPYCAT,
       cabal: config.FEATURE_CABAL,
       xray: config.FEATURE_XRAY,
+      larp: config.FEATURE_LARP,
       clock: config.FEATURE_CLOCK,
       family: config.FEATURE_FAMILY,
       roadmap: config.FEATURE_ROADMAP,

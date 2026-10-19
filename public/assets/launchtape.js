@@ -60,6 +60,7 @@ export function createLaunchTape({ tape, grid, count, cfg }) {
         <span class="lc-age" data-at="${t.at}">${ageShort(t.at)}</span>
       </div>
       ${raw(verdict)}
+      ${raw(t.larp ? html`<a class="lc-larp ${raw(t.larp.kind)}" href="/larp?address=${t.address}" title="LARP Scanner"><i><span>LARP</span></i>${t.larp.label}</a>` : '')}
       ${raw(t.death ? html`<a class="lc-death ${raw(t.death.status)}" href="/xray?address=${t.address}" title="Death Clock: from launches born the same way"><span class="lcd-i">${raw(HOURGLASS)}</span><b data-death="${t.death.expectedDeathAt || ''}" data-status="${t.death.status}">${deathText(t.death.expectedDeathAt, t.death.status)}</b>${raw(t.death.diedPct != null ? `<small>${t.death.diedPct}% of twins died</small>` : '')}</a>` : '')}
       <div class="lc-meta">
         ${raw(t.ticker ? `<span class="chip chip-accent">${esc(t.ticker)} narrative</span>` : '')}

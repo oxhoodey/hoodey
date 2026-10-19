@@ -32,6 +32,7 @@ const FONT = {
   '(': ['...#.', '..#..', '.#...', '.#...', '.#...', '..#..', '...#.'], ')': ['.#...', '..#..', '...#.', '...#.', '...#.', '..#..', '.#...'],
   "'": ['..#..', '..#..', '.#...', '.....', '.....', '.....', '.....'], '!': ['..#..', '..#..', '..#..', '..#..', '..#..', '.....', '..#..'],
   '?': ['.###.', '#...#', '....#', '...#.', '..#..', '.....', '..#..'], '=': ['.....', '.....', '#####', '.....', '#####', '.....', '.....'],
+  '@': ['.###.', '#...#', '#.###', '#.#.#', '#.###', '#....', '.####'], '>': ['.#...', '..#..', '...#.', '....#', '...#.', '..#..', '.#...'],
   '_': ['.....', '.....', '.....', '.....', '.....', '.....', '#####'], ' ': ['.....', '.....', '.....', '.....', '.....', '.....', '.....']
 };
 
@@ -210,6 +211,31 @@ export function xrayCard(x, host) {
     text(vs, W - 64 - width(vs, 3), y, 3, '#5B6E61');
     rect(646, y + 34, 490, 12, '#EAF2EC'); rect(646, y + 34, Math.round(490 * v / 100), 12, v >= 60 ? col : '#9DB8A6');
   });
+  footer(text, width, host);
+  return png(px);
+}
+
+// LARP Scanner: whose identity this token is wearing.
+const LARP_VERDICT = { high: 'LIKELY LARP', medium: 'BORROWED SIGNS', low: 'LOOKS LIKE ITS OWN' };
+export function larpCard(scan, host) {
+  const { px, rect, text, width } = canvas();
+  const col = COLOR[scan.verdict] || COLOR.low;
+  bg(rect);
+  rect(0, 0, W, 12, col);
+  text('HOODEY · LARP SCAN', 64, 52, 3, '#067A2E');
+  const sym = '$' + fit(scan.token.symbol || '?', 10);
+  text(sym, 64, 92, sym.length > 7 ? 7 : 9, '#0E1F15');
+  const x = scan.links.x;
+  text(fit(x ? (x.handle ? '@' + x.handle : x.label) : 'NO X LINKED', 26), 64, 182, 3, x && x.famous ? col : '#5B6E61');
+  const end = text(String(scan.score), 64, 250, 17, col, 3);
+  text('/100', end + 8, 362, 6, '#A8C2B1');
+  text(LARP_VERDICT[scan.verdict] || '', 64, 460, 5, col);
+  rect(64, 520, 470, 14, '#EAF2EC'); rect(64, 520, Math.round(470 * scan.score / 100), 14, col);
+  rect(610, 70, 2, 470, '#DFEAE2');
+  text('WHY', 646, 84, 3, '#5B6E61');
+  const lines = scan.reasons.filter((r) => r.pts > 0).slice(0, 6);
+  if (!lines.length) text(fit((scan.reasons[0] && scan.reasons[0].short) || 'NO BORROWED LINKS', 21), 646, 140, 3, '#0E1F15');
+  lines.forEach((r, i) => { const y = 140 + i * 64; rect(646, y + 6, 10, 10, col); text(fit(r.short || r.text, 21), 674, y, 3, '#0E1F15'); });
   footer(text, width, host);
   return png(px);
 }

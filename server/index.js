@@ -7,7 +7,7 @@ import { log, isAddress } from './util.js';
 import * as data from './data.js';
 import { startAlerts } from './alerts.js';
 import { tokenImage } from './images.js';
-import { cabalCard, deathCard, xrayCard } from './ogcard.js';
+import { cabalCard, deathCard, xrayCard, larpCard } from './ogcard.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PUBLIC = path.join(ROOT, 'public');
@@ -19,6 +19,7 @@ const PAGES = {
   '/copycat': { file: 'copycat.html', feature: 'copycat' },
   '/cabal': { file: 'cabal.html', feature: 'cabal' },
   '/xray': { file: 'xray.html', feature: 'xray' },
+  '/larp': { file: 'larp.html', feature: 'larp' },
   '/clock': { file: 'clock.html', feature: 'clock' },
   '/family': { file: 'family.html', feature: 'family' },
   '/roadmap': { file: 'roadmap.html', feature: 'roadmap' }
@@ -92,7 +93,7 @@ async function renderPage(req, res, file, pathname, url) {
   // absolute URL for previews: PUBLIC_URL, or the host the request came in on
   const origin = base || `${String(req.headers['x-forwarded-proto'] || 'https').split(',')[0]}://${req.headers.host}`;
   const addr = url && url.searchParams.get('address');
-  const shareable = ['/cabal', '/xray'].includes(pathname) && isAddress(addr || '');
+  const shareable = ['/cabal', '/xray', '/larp'].includes(pathname) && isAddress(addr || '');
   const ogImage = shareable ? `${origin}/og${pathname}/${addr.toLowerCase()}.png` : `${origin}/assets/og-default.png`;
   html = html
     .replaceAll('{{APP_NAME}}', escHtml(config.APP_NAME))
@@ -178,6 +179,17 @@ async function api(req, res, url) {
       if (out && out.error) return json(res, out.status || 503, { error: out.error }, cors);
       return out ? json(res, 200, out, cors) : json(res, 404, { error: 'No token contract at this address on Robinhood Chain.' }, cors);
     }
+    case '/api/larp/board':
+      if (!f.larp) return off('LARP Scanner');
+      return json(res, 200, await data.larpBoard(), cors);
+    case '/api/larp/scan': {
+      if (!f.larp) return off('LARP Scanner');
+      const a = (q.get('address') || '').trim();
+      if (!isAddress(a)) return needAddress();
+      const out = await data.larpScan(a);
+      if (out && out.error) return json(res, out.status || 503, { error: out.error }, cors);
+      return out ? json(res, 200, out, cors) : json(res, 404, { error: 'No token contract at this address on Robinhood Chain.' }, cors);
+    }
     case '/api/xray/board':
       if (!f.xray) return off('X-Ray');
       return json(res, 200, await data.xrayBoard(), cors);
@@ -227,6 +239,14 @@ const server = http.createServer(async (req, res) => {
       if (!out || out.error) return send(res, 404, '', { 'Cache-Control': 'public, max-age=60' });
       const host = (config.PUBLIC_URL ? config.PUBLIC_URL.replace(/^https?:\/\//, '') : String(req.headers.host || '')).replace(/\/$/, '');
       return send(res, 200, ogCache(`cabal:${token}:${out.score}:${out.reasons.length}`, () => cabalCard(out, host)), { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=300', 'Content-Security-Policy': "default-src 'none'; sandbox" });
+    }
+    if (p.startsWith('/og/larp/')) {
+      const a = p.slice(9).replace(/\.png$/, '');
+      if (!isAddress(a)) return send(res, 404, '');
+      const out = await data.larpScan(a);
+      if (!out || out.error) return send(res, 404, '', { 'Cache-Control': 'public, max-age=60' });
+      const host = (config.PUBLIC_URL ? config.PUBLIC_URL.replace(/^https?:\/\//, '') : String(req.headers.host || '')).replace(/\/$/, '');
+      return send(res, 200, ogCache(`larp:${a}:${out.score}:${out.reasons.length}`, () => larpCard(out, host)), { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=300', 'Content-Security-Policy': "default-src 'none'; sandbox" });
     }
     if (p.startsWith('/og/xray/')) {
       const a = p.slice(9).replace(/\.png$/, '');

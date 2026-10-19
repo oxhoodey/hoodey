@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{APP_NAME}} — LARP Scanner</title>
+<meta name="description" content="LARP Scanner: Pons launches that wear someone else's X account, tweet or website. See whose identity a token borrowed and who used it first.">
+<meta property="og:title" content="{{APP_NAME}} — LARP Scanner">
+<meta property="og:description" content="{{APP_TAGLINE}}">
+<meta property="og:url" content="{{CANONICAL}}">
+<meta property="og:image" content="{{OG_IMAGE}}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="{{OG_IMAGE}}">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Funnel+Display:wght@400;500;600;700&family=Funnel+Sans:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/styles.css">
+{{THEME_STYLE}}
+</head>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+<div class="wrap">
+<header class="top"></header>
+<main style="display: contents">
+
+<section class="hero">
+  <div>
+    <span class="eyebrow">LARP Scanner</span>
+    <h1 class="display">Whose X is it, really?</h1>
+    <p class="lede" style="max-width: 580px">Plenty of launches link an X account that isn't theirs: a famous brand, someone's viral tweet, or a team page another token already used. Paste a token and see whose identity it borrowed.</p>
+  </div>
+  <form id="lp-form" class="panel panel-sm" role="search" novalidate style="flex: 0 1 480px; min-width: min(280px, 100%)">
+    <label for="la" style="font-size: 13px; font-weight: 600">LARP Scan · token contract address</label>
+    <div class="field">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20 L16 16"/></svg>
+      <input id="la" name="address" type="text" placeholder="0x…" autocomplete="off" spellcheck="false">
+    </div>
+    <span class="form-error" id="lp-error" role="alert"></span>
+    <div class="xr-quick">
+      <button type="button" class="btn" id="pick-larp">Newest LARP</button>
+      <button type="submit" class="btn btn-primary">Scan token</button>
+    </div>
+  </form>
+</section>
+
+<div id="result" aria-live="polite" style="display: flex; flex-direction: column; gap: 28px"></div>
+
+<section class="panel" aria-label="Borrowed accounts" style="scroll-margin-top: 90px">
+  <div class="panel-head" style="align-items: flex-end">
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <span class="eyebrow">Most borrowed</span>
+      <h2 style="font-size: 30px; font-weight: 700">X accounts wearing many tokens</h2>
+      <span class="small muted" id="lb-sub">Accounts linked by more than one launch, and famous accounts linked at all.</span>
+    </div>
+    <span class="src" id="src-board" hidden></span>
+  </div>
+  <div class="dr-stats" id="lb-stats"></div>
+  <div class="lb-grid" id="lb-accounts"><div class="skel" style="min-height: 220px"></div></div>
+</section>
+
+<section class="panel" aria-label="Fresh LARPs">
+  <div class="panel-head"><div style="display: flex; flex-direction: column; gap: 4px"><span class="eyebrow">Fresh LARPs</span><h2 class="h2">Newest launches wearing someone else's links</h2></div></div>
+  <div class="dr-list" id="lb-recent"><div class="skel" style="min-height: 160px"></div></div>
+</section>
+<p class="note">LARP Scanner reads the X, Telegram and website links each Pons token publishes in its launch transaction. It flags famous accounts and sites, links to someone's tweet, and links an earlier launch already used. When it can, it also reads the X profile: its age, followers and whether its bio names the token. A real team can share a link on purpose, so treat this as a signal, not proof. Not financial advice.</p>
+
+</main>
+<footer class="foot"></footer>
+</div>
+<script type="module" src="/assets/larp.js"></script>
+</body>
+</html>

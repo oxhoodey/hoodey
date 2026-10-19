@@ -95,3 +95,19 @@ export async function xray(address) {
     return { error: warming ? 'Hoodey is still reading the latest blocks after a restart. Try again in a minute.' : `Couldn't read this address right now (${e.message.slice(0, 80)}). Try again in a moment.` };
   }
 }
+
+// LARP Scanner: never a demo stand-in in live mode.
+export const larpBoard = () => liveOr('larp:board', () => live.larpList ? live.larpList() : Promise.reject(new Error('LARP Scanner needs DATA_SOURCE=chain')), () => sample.larpBoard());
+export async function larpScan(address) {
+  if (!useLive()) return sample.larpScan(address);
+  try {
+    if (!live.larpScan) throw new Error('LARP Scanner needs DATA_SOURCE=chain');
+    return await cached(`larp:${address.toLowerCase()}`, () => live.larpScan(address));
+  } catch (e) {
+    if (/No contract/i.test(e.message)) return null;
+    if (e.code === 'NO_TRADES') return { error: e.message, status: 404 };
+    log.warn(`live larp scan ${address} failed:`, e.message);
+    const warming = /catching up|Indexer/i.test(e.message);
+    return { error: warming ? 'Hoodey is still reading the latest blocks after a restart. Try again in a minute.' : `Couldn't scan this token right now (${e.message.slice(0, 80)}). Try again in a moment.` };
+  }
+}
