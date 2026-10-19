@@ -18,7 +18,10 @@ const state = {
   error: null,
   head: 0, // last block fully indexed
   startedFrom: 0,
-  startedAt: 0, // timestamp of the first indexed block
+  startedAt: 0, // timestamp of the first block in the history window
+  backfillFrom: 0,
+  backfillTo: 0,
+  backfilling: false,
   launches: new Map(), // token -> launch
   curves: new Map(), // curve -> token
   trades: [], // oldest first
@@ -190,31 +193,62 @@ function prune() {
   for (const [k, l] of state.launches) if (l.t < cutoff) state.launches.delete(k);
 }
 
+// Index a block range in chunks, narrowing the chunk when the RPC rejects a wide range.
+async function indexSpan(from, to, onChunk) {
+  let span = config.INDEX_CHUNK_BLOCKS;
+  let cur = from;
+  while (cur <= to) {
+    const end = Math.min(to, cur + span - 1);
+    try {
+      await indexRange(cur, end);
+    } catch (e) {
+      if (span > 200) { span = Math.floor(span / 2); log.debug(`Indexer: narrowing to ${span} blocks (${e.message.slice(0, 80)})`); continue; }
+      throw e;
+    }
+    cur = end + 1;
+    if (onChunk) onChunk(end);
+    if (span < config.INDEX_CHUNK_BLOCKS) span = Math.min(config.INDEX_CHUNK_BLOCKS, span * 2);
+  }
+}
+
+// Older history fills in behind the live head, newest hours first, so pages are useful within seconds.
+async function backfill() {
+  state.backfilling = true;
+  try {
+    let hi = state.backfillTo;
+    while (hi > state.backfillFrom) {
+      const lo = Math.max(state.backfillFrom, hi - config.INDEX_CHUNK_BLOCKS + 1);
+      await indexSpan(lo, hi);
+      hi = lo - 1;
+      state.backfillTo = hi;
+      state.trades.sort((a, b) => a.t - b.t);
+    }
+    log.info(`Indexer: history loaded (${config.INDEX_BACKFILL_HOURS}h): ${state.launches.size} launches, ${state.trades.length} trades`);
+  } catch (e) {
+    log.warn('Indexer backfill stopped:', e.message.slice(0, 160));
+  } finally {
+    state.backfilling = false;
+  }
+}
+
 async function catchUp() {
   const latest = parseInt(await rpc('eth_blockNumber', []), 16);
   if (!state.head) {
-    // Estimate how many blocks the backfill needs from the recent block rate.
+    // Estimate how many blocks the history needs from the recent block rate.
     const probe = Math.max(0, latest - 20000);
     const [tNow, tProbe] = await Promise.all([blockTime(latest), blockTime(probe)]);
     const perBlock = Math.max(1, tNow - tProbe) / (latest - probe);
     const back = Math.round((config.INDEX_BACKFILL_HOURS * 3600e3) / perBlock);
-    state.head = Math.max(0, latest - back);
-    state.startedFrom = state.head;
-    state.startedAt = await blockTime(state.head);
-    log.info(`Indexer: backfilling ${config.INDEX_BACKFILL_HOURS}h (${back.toLocaleString('en-US')} blocks) from block ${state.head}`);
+    const quick = Math.min(back, Math.round((20 * 60e3) / perBlock)); // last 20 minutes first
+    state.head = Math.max(0, latest - quick);
+    state.backfillFrom = Math.max(0, latest - back);
+    state.backfillTo = state.head;
+    state.startedFrom = state.backfillFrom;
+    state.startedAt = await blockTime(state.backfillFrom);
+    log.info(`Indexer: reading the last 20 min first, then ${config.INDEX_BACKFILL_HOURS}h of history (${back.toLocaleString('en-US')} blocks) in the background`);
   }
-  let span = config.INDEX_CHUNK_BLOCKS;
-  while (state.head < latest) {
-    const to = Math.min(latest, state.head + span);
-    try {
-      await indexRange(state.head + 1, to);
-    } catch (e) {
-      // Too many results or too wide a range for this RPC: retry the same blocks in smaller steps.
-      if (span > 200) { span = Math.floor(span / 2); log.debug(`Indexer: narrowing to ${span} blocks (${e.message.slice(0, 80)})`); continue; }
-      throw e;
-    }
-    state.head = to;
-    if (span < config.INDEX_CHUNK_BLOCKS) span = Math.min(config.INDEX_CHUNK_BLOCKS, span * 2);
+  if (state.head < latest) {
+    await indexSpan(state.head + 1, latest, (end) => { state.head = end; });
   }
   state.trades.sort((a, b) => a.t - b.t);
   prune();
@@ -222,6 +256,7 @@ async function catchUp() {
   if (!state.ready) {
     state.ready = true;
     log.info(`Indexer ready: ${state.launches.size} launches, ${state.trades.length} trades, head ${state.head}`);
+    if (state.backfillTo > state.backfillFrom) backfill();
   }
 }
 
@@ -258,7 +293,7 @@ export function trades(sinceMs = 0) {
 }
 
 export function status() {
-  return { ready: state.ready, head: state.head, launches: state.launches.size, trades: state.trades.length, since: state.startedAt ? new Date(state.startedAt).toISOString() : null, error: state.error };
+  return { ready: state.ready, head: state.head, history: state.backfilling ? `loading (${Math.round(100 * (1 - (state.backfillTo - state.backfillFrom) / Math.max(1, state.head - state.backfillFrom)))}%)` : 'complete', launches: state.launches.size, trades: state.trades.length, since: state.startedAt ? new Date(state.startedAt).toISOString() : null, error: state.error };
 }
 
 export const isReady = () => state.ready;

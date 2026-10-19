@@ -255,7 +255,8 @@ export async function copycat(address) {
 
   return {
     source: 'live',
-    note: token.at ? undefined : `This token launched before the ${config.INDEX_KEEP_HOURS}h window HoodEye keeps, so it is compared with recent launches only.`,
+    note: [token.at ? '' : `This token launched before the ${config.INDEX_KEEP_HOURS}h window HoodEye keeps, so it is compared with recent launches only.`,
+      ix.status().history !== 'complete' ? 'HoodEye restarted recently and is still loading older launches, so matches and deployer history may grow in a minute.' : ''].filter(Boolean).join(' ') || undefined,
     token: {
       name: token.name, symbol: token.symbol, address: token.address, launchpad: token.launchpad, launchedAt: token.at,
       hasImage: !!token.image, links: token.links || null,
