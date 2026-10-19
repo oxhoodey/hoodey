@@ -132,7 +132,7 @@ export async function initPage(current) {
     ? `<a class="btn btn-lg btn-primary" href="${esc(cfg.alertsUrl)}" target="_blank" rel="noopener"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M22 3 L2 11 L9 13 L11 20 L14 15 L19 19 Z"/><path d="M9 13 L22 3"/></svg>Get alerts</a>`
     : '';
   header.innerHTML = `
-    <a class="brand" href="/" aria-label="${esc(cfg.APP_NAME)} home"><span class="brand-mark">${LOGO}</span><span class="brand-name">${esc(cfg.APP_NAME)}</span></a>
+    <a class="brand" href="/" aria-label="${esc(cfg.APP_NAME)} home"><span class="brand-mark">${LOGO}</span><img class="brand-word" src="/assets/wordmark.svg" alt="${esc(cfg.APP_NAME)}" width="253" height="60"></a>
     <nav class="nav" aria-label="Main navigation">${nav}</nav>
     <div class="top-actions">
       <span class="ro-badge"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="stroke: var(--accent-ink)" stroke-width="2.2" aria-hidden="true"><path d="M12 3 L20 6 V12 C20 16.5 16.5 20 12 21 C7.5 20 4 16.5 4 12 V6 Z"/><path d="M8.5 12 L11 14.5 L15.5 9.5"/></svg>Read-only · we never ask you to sign</span>
