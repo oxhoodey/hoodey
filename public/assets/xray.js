@@ -1,4 +1,5 @@
 import { initPage, api, html, raw, esc, timeAgo, sourceBadge, isAddress, explorerLink, ponsLink, avatar, every } from './common.js';
+import { agentScan, scanLabel } from './agent.js';
 import { createParticleText } from './particletext.js';
 import { deathText } from './launchtape.js';
 
@@ -170,12 +171,45 @@ function renderWallet(d) {
   wireShare(d.wallet, `Wallet X-Ray: ${short(d.wallet)} is a ${d.archetype.label}.\n${d.archetype.why}\nPnL ${signed(st.pnlEth)} ETH on ${st.tokensTraded} Pons tokens.\n\nvia ${cfg.APP_NAME}`);
 }
 
+function findings(d) {
+  if (d.kind === 'token') {
+    const s = d.signs, out = [{ text: `Birth signs: ${s.snipers} snipers, ${s.bundled} bundled buys, ${s.crew} crew wallets`, tone: s.snipers + s.bundled + s.crew >= 5 ? 'bad' : 'info' }];
+    out.push({ text: `Found ${d.lookalikes} look-alike launches among ${d.learningFrom} finished ones`, tone: 'info' });
+    if (d.diedPct != null) out.push({ text: `${d.diedPct}% of them died, median life ${mins(d.medianLifeMin)}`, tone: d.diedPct >= 70 ? 'bad' : 'info' });
+    out.push({ text: d.status === 'dead' ? `Already dead after ${mins(d.livedMin)}` : d.medianLifeMin == null ? 'Too fresh to call' : `${deathText(d.expectedDeathAt, d.status)}`, tone: d.status === 'alive' ? 'info' : 'bad' });
+    return out;
+  }
+  const st = d.stats;
+  return [
+    { text: `Traced ${st.buys + st.sells} curve trades across ${st.tokensTraded} tokens`, tone: 'info' },
+    { text: `Win rate ${st.winRate == null ? '—' : st.winRate + '%'}, median hold ${mins(st.medianHoldMin)}`, tone: 'info' },
+    ...(d.crew ? [{ text: `Member of ${d.crew}`, tone: 'bad' }] : []),
+    ...(st.deployed ? [{ text: `Deployed ${st.deployed} tokens`, tone: st.deployed >= 3 ? 'bad' : 'info' }] : []),
+    { text: `Classified as: ${d.archetype.label}`, tone: ARCH_TONE[d.archetype.k] === 'bad' ? 'bad' : ARCH_TONE[d.archetype.k] === 'good' ? 'good' : 'info' }
+  ];
+}
+function read(d) {
+  if (d.kind === 'token') {
+    const sym = `$${d.token.symbol}`;
+    if (d.status === 'dead') return `${sym} is already dead: it lived ${mins(d.livedMin)}${d.fromPeakPct != null ? ` and sits ${Math.abs(d.fromPeakPct)}% below its peak` : ''}. ${d.diedPct != null ? `${d.diedPct}% of launches born like it ended the same way.` : ''}`;
+    if (d.medianLifeMin == null) return `${sym} is too fresh to call. Not enough finished launches look like it yet; check back in a few minutes.`;
+    return `${sym} was born with ${d.signs.snipers} snipers, ${d.signs.bundled} bundled buys and ${d.signs.crew} crew wallets. Launches that started like this lived about ${mins(d.medianLifeMin)}, and ${d.diedPct}% of them are dead. ${d.status === 'overtime' ? 'It has already outlived them, which is rare.' : `By that pattern it has ${deathText(d.expectedDeathAt, d.status).replace(' left', '')} left.`}`;
+  }
+  const st = d.stats;
+  return `${short(d.wallet)} trades like a ${d.archetype.label.toLowerCase()}. ${d.archetype.why} Across ${st.tokensTraded} Pons tokens it is ${st.pnlEth >= 0 ? 'up' : 'down'} ${fmtEth(Math.abs(st.pnlEth))} ETH${st.winRate != null ? ` with a ${st.winRate}% win rate` : ''}.${d.crew ? ` It buys together with ${d.crew}.` : ''}`;
+}
+
 async function run(address) {
   stopClock();
-  $('result').innerHTML = '<div class="skel" style="min-height: 380px"></div>';
   try {
-    const d = await api(`/api/xray?address=${encodeURIComponent(address)}`);
+    const job = await agentScan($('result'), {
+      label: scanLabel('X-Ray', address),
+      steps: ['Checking if this is a token or a wallet', 'Reading its Pons launches and curve trades', 'Comparing with every launch in the window', 'Building the profile'],
+      task: api(`/api/xray?address=${encodeURIComponent(address)}`), findings, read
+    });
+    const d = job.data;
     d.kind === 'token' ? renderToken(d) : renderWallet(d);
+    job.attach();
   } catch (err) {
     $('result').innerHTML = html`<div class="empty">${err.message}</div>`;
   }

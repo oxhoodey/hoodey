@@ -1,3 +1,4 @@
+import { agentScan, scanLabel } from './agent.js';
 import { initPage, api, html, raw, esc, timeAgo, sourceBadge, isAddress, explorerLink, ponsLink, avatar, every } from './common.js';
 
 const cfg = await initPage('cabal');
@@ -120,10 +121,36 @@ function render(d) {
   });
 }
 
+function findings(d) {
+  const s = d.stats, out = [];
+  out.push({ text: `Read ${s.buyers} buyers, ${s.earlyBuyers} of them in the first minute`, tone: 'info' });
+  out.push({ text: s.snipers ? `${s.snipers} sniper${s.snipers === 1 ? '' : 's'} bought within ${d.sniperSec}s` : `No snipers in the first ${d.sniperSec}s`, tone: s.snipers >= 3 ? 'bad' : s.snipers ? 'info' : 'good' });
+  out.push({ text: d.bundles.length ? `${d.bundles.length} same-block bundle${d.bundles.length === 1 ? '' : 's'} (${s.bundledWallets} wallets)` : 'No same-block bundles', tone: d.bundles.length ? 'bad' : 'good' });
+  if (s.crews && s.crews.length) out.push({ text: `Crew match: ${s.crews.join(', ')}`, tone: 'bad' });
+  if (s.flagged) out.push({ text: `Flagged wallets hold ${s.flaggedHoldPct.toFixed(1)}% of supply`, tone: s.flaggedHoldPct >= 20 ? 'bad' : 'info' });
+  out.push({ text: `Cabal score ${d.score}/100`, tone: d.verdict === 'low' ? 'good' : 'bad' });
+  return out;
+}
+function read(d) {
+  const s = d.stats, sym = `$${d.token.symbol}`;
+  if (d.verdict === 'low') return `${sym} looks organic: no real sniping, bundling or crew buying in its first minute. ${s.buyers} wallets have bought so far.`;
+  const parts = [];
+  if (s.snipers) parts.push(`${s.snipers} sniper${s.snipers === 1 ? '' : 's'}`);
+  if (d.bundles.length) parts.push(`${d.bundles.length} same-block bundle${d.bundles.length === 1 ? '' : 's'}`);
+  if (s.crews && s.crews.length) parts.push(`${s.crews.join(' and ')}`);
+  const hold = s.flagged ? ` Those wallets still hold ${s.flaggedHoldPct.toFixed(1)}% of supply${s.flaggedExited ? ` and ${s.flaggedExited} of ${s.flagged} have already sold out` : ''}.` : '';
+  return `${sym} has a ${d.verdict === 'high' ? 'heavy' : 'clear'} cabal footprint: ${parts.join(', ') || 'coordinated early buying'} in the first minute.${hold} ${d.verdict === 'high' ? 'Anyone buying now is likely buying from them.' : 'Watch whether they start selling.'}`;
+}
+
 async function run(address) {
-  $('result').innerHTML = '<div class="skel" style="min-height: 380px"></div>';
   try {
-    render(await api(`/api/cabal/scan?address=${encodeURIComponent(address)}`));
+    const job = await agentScan($('result'), {
+      label: scanLabel('Cabal scan', address),
+      steps: ['Finding the launch block', 'Pulling every curve trade from the first minute', 'Timing each first buy against launch', 'Grouping buys that landed in the same block', 'Matching wallets with known crews', "Checking the deployer's circle"],
+      task: api(`/api/cabal/scan?address=${encodeURIComponent(address)}`), findings, read
+    });
+    render(job.data);
+    job.attach();
   } catch (err) {
     $('result').innerHTML = html`<div class="empty">${err.message}</div>`;
   }

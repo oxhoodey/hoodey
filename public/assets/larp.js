@@ -1,3 +1,4 @@
+import { agentScan, scanLabel } from './agent.js';
 import { initPage, api, html, raw, esc, timeAgo, sourceBadge, isAddress, explorerLink, ponsLink, avatar, every } from './common.js';
 
 const cfg = await initPage('larp');
@@ -75,10 +76,32 @@ function render(d) {
   }));
 }
 
+function findings(d) {
+  const out = [];
+  const x = d.links.x;
+  out.push({ text: x ? `X link: ${x.label}${x.famous ? ' (famous account)' : ''}` : 'No X link in the launch', tone: x && x.famous ? 'bad' : 'info' });
+  if (d.links.website) out.push({ text: `Website: ${d.links.website.host}${d.links.website.famous ? ' (famous company)' : ''}`, tone: d.links.website.famous ? 'bad' : 'info' });
+  if (d.sharedX.length > 1) out.push({ text: `${d.sharedX.length} launches used this X link, first was $${d.sharedX[0].symbol}`, tone: d.sharedX[0].self ? 'info' : 'bad' });
+  if (d.profile) out.push({ text: `@${d.profile.handle}: ${fmtN(d.profile.followers)} followers${d.profile.createdAt ? ', joined ' + new Date(d.profile.createdAt).getFullYear() : ''}`, tone: 'info' });
+  out.push({ text: `LARP score ${d.score}/100`, tone: d.verdict === 'low' ? 'good' : 'bad' });
+  return out;
+}
+function read(d) {
+  const sym = `$${d.token.symbol}`, top = d.reasons.filter((r) => r.pts > 0);
+  if (d.verdict === 'low') return top.length ? `${sym} mostly looks like it owns its links. Minor flag: ${top[0].text.charAt(0).toLowerCase() + top[0].text.slice(1)}` : `${sym} looks like it owns its links: no famous account, no borrowed tweet, and no earlier launch used the same ones.`;
+  return `${sym} is ${d.verdict === 'high' ? 'most likely wearing someone else\'s identity' : 'showing borrowed signs'}. ${top.slice(0, 2).map((r) => r.text).join(' ')} Don't take its X account as proof of a team.`;
+}
+
 async function run(address) {
-  $('result').innerHTML = '<div class="skel" style="min-height: 380px"></div>';
-  try { render(await api(`/api/larp/scan?address=${encodeURIComponent(address)}`)); }
-  catch (err) { $('result').innerHTML = html`<div class="empty">${err.message}</div>`; }
+  try {
+    const job = await agentScan($('result'), {
+      label: scanLabel('LARP scan', address),
+      steps: ['Decoding the links in the launch transaction', 'Checking them against famous accounts and sites', 'Searching every launch for the same X, site and Telegram', 'Reading the X profile'],
+      task: api(`/api/larp/scan?address=${encodeURIComponent(address)}`), findings, read
+    });
+    render(job.data);
+    job.attach();
+  } catch (err) { $('result').innerHTML = html`<div class="empty">${err.message}</div>`; }
 }
 function go(a) {
   $('la').value = a;

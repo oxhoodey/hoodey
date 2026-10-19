@@ -1,3 +1,4 @@
+import { agentScan, scanLabel } from './agent.js';
 import { initPage, api, html, raw, esc, fmtDuration, timeAgo, short, sourceBadge, isAddress, explorerLink, ponsLink, tokenImg } from './common.js';
 
 const cfg = await initPage('copycat');
@@ -91,12 +92,37 @@ function render(d) {
   $('result').querySelectorAll('[data-src]').forEach((el) => sourceBadge(el, d));
 }
 
+const pctOf = (v) => Math.round((v || 0) * 100);
+function findings(d) {
+  const t = d.token, dep = d.deployer, out = [];
+  out.push({ text: `Compared $${t.symbol || '?'} with ${(d.scanned || 0).toLocaleString('en-US')} older launches`, tone: 'info' });
+  if (t.closest) out.push({ text: `Closest match: $${t.closest.symbol}, ${pctOf(t.imageSimilarity ?? t.nameSimilarity)}% alike`, tone: t.flagged ? 'bad' : 'info' });
+  else out.push({ text: 'No older token with a similar name', tone: 'good' });
+  if (dep) out.push({ text: dep.pattern === 'farm' ? `Deployer launched ${dep.tokens30d ?? 'many'} tokens: farm pattern` : dep.pattern === 'repeat' ? `Deployer has launched before (${dep.tokens30d ?? '?'} tokens)` : 'First launch seen from this deployer', tone: dep.pattern === 'farm' ? 'bad' : dep.pattern === 'repeat' ? 'info' : 'good' });
+  return out;
+}
+function read(d) {
+  const t = d.token, dep = d.deployer, sym = `$${t.symbol || '?'}`;
+  let s = t.flagged && t.closest
+    ? `${sym} is most likely a copy of $${t.closest.symbol}: the names are ${pctOf(t.imageSimilarity ?? t.nameSimilarity)}% alike${t.closest.diedAfter ? `, and the original died ${t.closest.diedAfter} after launch` : ''}.`
+    : `${sym} doesn't copy any older launch we've seen.`;
+  if (dep && dep.pattern === 'farm') s += ` Its deployer farms launches${dep.deadWithin6h ? `: ${dep.deadWithin6h} died within 6 hours` : ''}, so treat it as a likely quick flip.`;
+  else if (dep && dep.pattern === 'repeat') s += ' The deployer has launched before; check how those ended below.';
+  else if (dep) s += ' It is the first launch we have seen from this deployer.';
+  return s;
+}
+
 async function run(path, mode) {
-  $('result').innerHTML = '<div class="skel" style="min-height: 360px"></div>';
   try {
-    const d = await api(path);
+    const job = await agentScan($('result'), {
+      label: scanLabel('Copycat scan', mode === 'scan' ? new URL(path, location.origin).searchParams.get('address') : null),
+      steps: ['Reading the launch transaction', 'Loading every launch name from the last 24h', 'Comparing name and ticker with older launches', "Tracing the deployer's launch history"],
+      task: api(path), findings, read
+    });
+    const d = job.data;
     d.mode = mode;
     render(d);
+    job.attach();
   } catch (err) {
     $('result').innerHTML = html`<div class="empty">${err.message}</div>`;
   }
