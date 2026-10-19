@@ -11,6 +11,17 @@ function ageShort(at) {
   return timeAgo(at).replace(' ago', '');
 }
 
+// Death Clock countdown: time left of the life tokens born like this one usually get
+export function deathText(expectedAt, status) {
+  if (status === 'dead') return 'Dead';
+  if (!expectedAt) return 'Not enough data';
+  const s = Math.round((Date.parse(expectedAt) - Date.now()) / 1000);
+  const a = Math.abs(s), mm = Math.floor(a / 60), ss = String(a % 60).padStart(2, '0');
+  const t = mm >= 120 ? `${Math.round(mm / 60)}h` : `${mm}:${ss}`;
+  return s >= 0 ? `${t} left` : `+${t} over`;
+}
+const HOURGLASS = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 3h12M6 21h12M7 3c0 5 10 5 10 9s-10 4-10 9M17 3c0 5-10 5-10 9s10 4 10 9"/></svg>';
+
 export function createLaunchTape({ tape, grid, count, cfg }) {
   const seen = new Set();
   let first = true;
@@ -49,6 +60,7 @@ export function createLaunchTape({ tape, grid, count, cfg }) {
         <span class="lc-age" data-at="${t.at}">${ageShort(t.at)}</span>
       </div>
       ${raw(verdict)}
+      ${raw(t.death ? html`<a class="lc-death ${raw(t.death.status)}" href="/xray?address=${t.address}" title="Death Clock: from launches born the same way"><span class="lcd-i">${raw(HOURGLASS)}</span><b data-death="${t.death.expectedDeathAt || ''}" data-status="${t.death.status}">${deathText(t.death.expectedDeathAt, t.death.status)}</b>${raw(t.death.diedPct != null ? `<small>${t.death.diedPct}% of twins died</small>` : '')}</a>` : '')}
       <div class="lc-meta">
         ${raw(t.ticker ? `<span class="chip chip-accent">${esc(t.ticker)} narrative</span>` : '')}
         <span class="lc-dep${raw(t.deployerLaunches >= 3 ? ' warn' : '')}">${dep}</span>
@@ -72,7 +84,13 @@ export function createLaunchTape({ tape, grid, count, cfg }) {
 
   // live clocks: ages tick every second, dots drift left every few seconds
   let lastPoints = [];
-  setInterval(() => { grid.querySelectorAll('.lc-age[data-at]').forEach((el) => { el.textContent = ageShort(el.dataset.at); }); }, 1000);
+  setInterval(() => {
+    grid.querySelectorAll('.lc-age[data-at]').forEach((el) => { el.textContent = ageShort(el.dataset.at); });
+    grid.querySelectorAll('[data-death]').forEach((el) => {
+      el.textContent = deathText(el.dataset.death, el.dataset.status);
+      if (el.dataset.status === 'alive' && el.dataset.death && Date.parse(el.dataset.death) < Date.now()) el.closest('.lc-death').classList.add('overtime');
+    });
+  }, 1000);
   setInterval(() => renderTape(lastPoints), 10000);
 
   return {

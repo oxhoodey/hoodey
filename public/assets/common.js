@@ -6,6 +6,7 @@ export const LOGO_PATHS = { ring: 'M348.15,216.78c0,96.14-77.93,174.07-174.07,17
 
 const ICONS = {
   cabal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="6" cy="7" r="2.5"/><circle cx="18" cy="7" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M8.3 8.2 L10.6 15.8 M15.7 8.2 L13.4 15.8 M8.5 7 H15.5"/></svg>',
+  xray: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 6.5 V17.5 M8.5 9 H15.5 M8 12 H16 M8.5 15 H15.5"/></svg>',
   radar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 12 L19 5"/></svg>',
   copycat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="11" height="11" rx="2"/><rect x="10" y="10" width="11" height="11" rx="2"/></svg>',
   clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7 V12 L15.5 14"/></svg>',
@@ -16,6 +17,7 @@ const NAV = [
   { key: 'radar', href: '/', label: 'Radar' },
   { key: 'copycat', href: '/copycat', label: 'Copycat' },
   { key: 'cabal', href: '/cabal', label: 'Cabal' },
+  { key: 'xray', href: '/xray', label: 'X-Ray' },
   { key: 'clock', href: '/clock', label: 'Clock' },
   { key: 'family', href: '/family', label: 'Family' },
   { key: 'roadmap', href: '/roadmap', label: 'Roadmap' }

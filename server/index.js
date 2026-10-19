@@ -7,7 +7,7 @@ import { log, isAddress } from './util.js';
 import * as data from './data.js';
 import { startAlerts } from './alerts.js';
 import { tokenImage } from './images.js';
-import { cabalCard } from './ogcard.js';
+import { cabalCard, deathCard, xrayCard } from './ogcard.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PUBLIC = path.join(ROOT, 'public');
@@ -18,6 +18,7 @@ const PAGES = {
   '/': { file: 'radar.html', feature: 'radar' },
   '/copycat': { file: 'copycat.html', feature: 'copycat' },
   '/cabal': { file: 'cabal.html', feature: 'cabal' },
+  '/xray': { file: 'xray.html', feature: 'xray' },
   '/clock': { file: 'clock.html', feature: 'clock' },
   '/family': { file: 'family.html', feature: 'family' },
   '/roadmap': { file: 'roadmap.html', feature: 'roadmap' }
@@ -91,7 +92,8 @@ async function renderPage(req, res, file, pathname, url) {
   // absolute URL for previews: PUBLIC_URL, or the host the request came in on
   const origin = base || `${String(req.headers['x-forwarded-proto'] || 'https').split(',')[0]}://${req.headers.host}`;
   const addr = url && url.searchParams.get('address');
-  const ogImage = pathname === '/cabal' && isAddress(addr || '') ? `${origin}/og/cabal/${addr.toLowerCase()}.png` : `${origin}/assets/og-default.png`;
+  const shareable = ['/cabal', '/xray'].includes(pathname) && isAddress(addr || '');
+  const ogImage = shareable ? `${origin}/og${pathname}/${addr.toLowerCase()}.png` : `${origin}/assets/og-default.png`;
   html = html
     .replaceAll('{{APP_NAME}}', escHtml(config.APP_NAME))
     .replaceAll('{{APP_TAGLINE}}', escHtml(config.APP_TAGLINE))
@@ -124,11 +126,10 @@ async function serveStatic(req, res, pathname) {
 
 // Share cards are cached briefly so a burst of X previews doesn't redraw the same PNG.
 const ogStore = new Map();
-function ogCache(token, scan, host) {
-  const key = `${token}:${scan.score}:${scan.reasons.length}`;
+function ogCache(key, draw) {
   const hit = ogStore.get(key);
   if (hit) return hit;
-  const buf = cabalCard(scan, host);
+  const buf = draw();
   ogStore.set(key, buf);
   if (ogStore.size > 200) ogStore.delete(ogStore.keys().next().value);
   return buf;
@@ -177,6 +178,17 @@ async function api(req, res, url) {
       if (out && out.error) return json(res, out.status || 503, { error: out.error }, cors);
       return out ? json(res, 200, out, cors) : json(res, 404, { error: 'No token contract at this address on Robinhood Chain.' }, cors);
     }
+    case '/api/xray/board':
+      if (!f.xray) return off('X-Ray');
+      return json(res, 200, await data.xrayBoard(), cors);
+    case '/api/xray': {
+      if (!f.xray) return off('X-Ray');
+      const a = (q.get('address') || '').trim();
+      if (!isAddress(a)) return needAddress();
+      const out = await data.xray(a);
+      if (out && out.error) return json(res, out.status || 503, { error: out.error }, cors);
+      return out ? json(res, 200, out, cors) : json(res, 404, { error: 'Nothing found for this address.' }, cors);
+    }
     case '/api/clock':
       if (!f.clock) return off('Market Clock');
       return json(res, 200, await data.clock(), cors);
@@ -214,7 +226,16 @@ const server = http.createServer(async (req, res) => {
       const out = await data.cabalScan(token);
       if (!out || out.error) return send(res, 404, '', { 'Cache-Control': 'public, max-age=60' });
       const host = (config.PUBLIC_URL ? config.PUBLIC_URL.replace(/^https?:\/\//, '') : String(req.headers.host || '')).replace(/\/$/, '');
-      return send(res, 200, ogCache(token, out, host), { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=300', 'Content-Security-Policy': "default-src 'none'; sandbox" });
+      return send(res, 200, ogCache(`cabal:${token}:${out.score}:${out.reasons.length}`, () => cabalCard(out, host)), { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=300', 'Content-Security-Policy': "default-src 'none'; sandbox" });
+    }
+    if (p.startsWith('/og/xray/')) {
+      const a = p.slice(9).replace(/\.png$/, '');
+      if (!isAddress(a)) return send(res, 404, '');
+      const out = await data.xray(a);
+      if (!out || out.error) return send(res, 404, '', { 'Cache-Control': 'public, max-age=60' });
+      const host = (config.PUBLIC_URL ? config.PUBLIC_URL.replace(/^https?:\/\//, '') : String(req.headers.host || '')).replace(/\/$/, '');
+      const key = out.kind === 'token' ? `death:${a}:${out.status}:${out.medianLifeMin}:${out.ageMin}` : `xray:${a}:${out.archetype.k}:${out.stats.pnlEth}`;
+      return send(res, 200, ogCache(key, () => (out.kind === 'token' ? deathCard(out, host) : xrayCard(out, host))), { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=300', 'Content-Security-Policy': "default-src 'none'; sandbox" });
     }
     if (p.startsWith('/img/')) {
       const token = p.slice(5);

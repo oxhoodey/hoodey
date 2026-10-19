@@ -3,6 +3,7 @@
 import { config } from './config.js';
 import { hashString, seededRandom, isAddress } from './util.js';
 import { buildMap, scanToken } from './cabal.js';
+import { buildModel, forecast, deathRow, xrayWallet, walletBoard } from './insight.js';
 
 
 const MIN = 60 * 1000;
@@ -74,7 +75,11 @@ export function radar(rangeHours) {
     source: 'sample',
     moves: [...spikes, ...quiet],
     events: spikes,
-    latest: LATEST,
+    latest: LATEST.map((l, i) => {
+      const med = [4, 11, 26, 7, 48, 15][i % 6];
+      const t = Date.parse(l.launchedAt || l.at || ago(5));
+      return { ...l, death: { status: i === 3 ? 'overtime' : 'alive', medianLifeMin: med, expectedDeathAt: new Date((isNaN(t) ? Date.now() : t) + med * MIN).toISOString(), diedPct: [92, 81, 64, 88, 41, 70][i % 6] } };
+    }),
     // last hour of launches for the launch tape (demo: 61 points)
     timeline: Array.from({ length: 61 }, (_, i) => {
       const l = LATEST[i % LATEST.length];
@@ -259,7 +264,7 @@ function world() {
     });
     if (creator === w('farmer', 0)) push(creator, 'buy', 1.2, 0.4);
     const n = 18 + Math.floor(rnd() * 25);
-    for (let k = 0; k < n; k++) push(retail[Math.floor(rnd() * retail.length)], rnd() < 0.7 ? 'buy' : 'sell', 4 + rnd() * 1500, 0.01 + rnd() * 0.12);
+    for (let k = 0; k < n; k++) push(retail[Math.floor(rnd() * retail.length)], rnd() < 0.7 ? 'buy' : 'sell', 4 + rnd() * (300 + (i % 5) * 700), 0.01 + rnd() * 0.12);
   });
   trades.sort((a, b) => a.block - b.block || a.t - b.t);
   cabalWorld = { at: now, launches: launches.sort((a, b) => b.t - a.t), trades };
@@ -281,4 +286,39 @@ export function cabalScan(address) {
   const r = scanToken(l.address, l, W.launches, W.trades, W.map);
   return { source: 'sample', note: known ? undefined : 'Sample mode: this is demo data, not the token at this address.',
     token: { address: l.address, name: l.name, symbol: l.symbol, hasImage: false, launchedAt: l.at, creator: l.creator }, ...r };
+}
+
+// ── Death Clock + Wallet X-Ray demo, on the same simulated market ─────────
+function insightWorld() {
+  const W = world();
+  if (!W.model) W.model = buildModel(W.launches, W.trades, W.map.memberOf, W.at);
+  return W;
+}
+
+export function xray(address) {
+  if (!isAddress(address)) return null;
+  const W = insightWorld();
+  const a = address.toLowerCase();
+  const note = 'Sample mode: this is demo data from a simulated market.';
+  const known = W.launches.find((l) => l.address === a);
+  const wallets = [...new Set(W.trades.map((x) => x.trader))];
+  if (known || !wallets.includes(a)) {
+    // tokens get their Death Clock; unknown addresses alternate between a token and a wallet demo
+    if (known || hashString(a) % 2 === 0) {
+      const l = known || W.launches[3];
+      return { source: 'sample', kind: 'token', windowHours: 6, note: known ? undefined : note,
+        token: { address: l.address, name: l.name, symbol: l.symbol, hasImage: false, launchedAt: l.at, creator: l.creator }, ...forecast(W.model, l.address) };
+    }
+    return { source: 'sample', kind: 'wallet', windowHours: 6, note, ...xrayWallet(W.model, W.map.crews[0] ? W.map.crews[0].members[0] : wallets[0], 2600) };
+  }
+  return { source: 'sample', kind: 'wallet', windowHours: 6, ...xrayWallet(W.model, a, 2600) };
+}
+
+export function xrayBoard() {
+  const W = insightWorld();
+  const m = W.model;
+  const dead = [...m.tokens.values()].filter((x) => x.life.dead && x.lifeMin != null);
+  const lives = dead.map((x) => x.lifeMin).sort((p, q) => p - q);
+  return { source: 'sample', windowHours: 6, deathRow: deathRow(m), ...walletBoard(m),
+    stats: { launches: m.tokens.size, dead: dead.length, deadPct: Math.round((dead.length / m.tokens.size) * 100), medianLifeMin: lives.length ? lives[Math.floor(lives.length / 2)] : null, learningFrom: m.resolved.length } };
 }

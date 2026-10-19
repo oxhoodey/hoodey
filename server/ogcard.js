@@ -134,3 +134,82 @@ export function defaultCard() {
   text('READ-ONLY · NO WALLET NEEDED', 64, 580, 3, '#5B6E61');
   return png(px);
 }
+
+const bg = (rect) => { for (let y = 18; y < H; y += 24) for (let x = 18; x < W; x += 24) rect(x, y, 2, 2, '#E4EEE7'); };
+const footer = (text, width, host) => {
+  text(fit(host, 34), 64, 590, 2, '#5B6E61');
+  const disc = 'NOT ADVICE · DYOR';
+  text(disc, W - 64 - width(disc, 3), 586, 3, '#A8C2B1');
+};
+const mins = (m) => (m == null ? '?' : m >= 120 ? `${Math.round(m / 60)}H` : `${Math.round(m)}M`);
+
+// Death Clock: how long this token is expected to live, from tokens born the same way.
+export function deathCard(f, host) {
+  const { px, rect, text, width } = canvas();
+  const col = f.status === 'alive' ? '#C88A0A' : '#D93A1F';
+  bg(rect);
+  rect(0, 0, W, 12, col);
+  text('HOODEY · DEATH CLOCK', 64, 52, 3, '#067A2E');
+  const sym = '$' + fit(f.token.symbol || '?', 10);
+  text(sym, 64, 92, sym.length > 7 ? 7 : 9, '#0E1F15');
+  text(fit(f.token.name || '', 26), 64, 182, 3, '#5B6E61');
+  let big, cap;
+  if (f.status === 'dead') { big = 'DEAD'; cap = `LIVED ${mins(f.livedMin)}`; }
+  else if (f.medianLifeMin == null) { big = '?'; cap = 'NOT ENOUGH TWINS YET'; }
+  else if (f.status === 'overtime') { big = '+' + mins(f.ageMin - f.medianLifeMin); cap = `OVERTIME · LIFE ${mins(f.medianLifeMin)}`; }
+  else { big = mins(f.medianLifeMin - f.ageMin); cap = `LEFT · LIFE ${mins(f.medianLifeMin)}`; }
+  text(big, 64, 250, big.length > 4 ? 13 : 17, col, 3);
+  text(fit(cap, 22), 64, 460, 3, col);
+  const life = f.medianLifeMin ? Math.min(1, f.ageMin / f.medianLifeMin) : 0;
+  rect(64, 520, 470, 14, '#EAF2EC'); rect(64, 520, Math.round(470 * (f.status === 'dead' ? 1 : life)), 14, col);
+  // right: what the look-alikes did, and the birth signs
+  rect(610, 70, 2, 470, '#DFEAE2');
+  text(`${f.lookalikes} TWINS`, 646, 84, 3, '#5B6E61');
+  const lines = [];
+  if (f.diedPct != null) lines.push(`${f.diedPct}% OF THEM DIED`);
+  if (f.medianLifeMin != null) lines.push(`MEDIAN LIFE ${mins(f.medianLifeMin)}`);
+  if (f.dump90Pct) lines.push(`${f.dump90Pct}% FELL 90%`);
+  const s = f.signs || {};
+  if (s.snipers) lines.push(`${s.snipers} SNIPER${s.snipers === 1 ? '' : 'S'} AT BIRTH`);
+  if (s.bundled) lines.push(`${s.bundled} BUNDLED BUYS`);
+  if (s.crew) lines.push(`${s.crew} CREW WALLET${s.crew === 1 ? '' : 'S'}`);
+  if (s.deployerLaunches > 1) lines.push(`DEPLOYER: ${s.deployerLaunches} LAUNCHES`);
+  if (s.copy) lines.push('COPY OF A NAME');
+  lines.slice(0, 6).forEach((l, i) => { const y = 140 + i * 64; rect(646, y + 6, 10, 10, col); text(fit(l, 21), 674, y, 3, '#0E1F15'); });
+  footer(text, width, host);
+  return png(px);
+}
+
+// Wallet X-Ray: the wallet's archetype, PnL and trait bars.
+export function xrayCard(x, host) {
+  const { px, rect, text, width } = canvas();
+  const bad = ['farmer', 'crew', 'sniper', 'bot'].includes(x.archetype.k);
+  const col = bad ? '#D93A1F' : x.archetype.k === 'exit' ? '#C88A0A' : '#00A804';
+  bg(rect);
+  rect(0, 0, W, 12, col);
+  text('HOODEY · WALLET X-RAY', 64, 52, 3, '#067A2E');
+  text(`${x.wallet.slice(0, 6)}.${x.wallet.slice(-4)}`, 64, 96, 4, '#5B6E61');
+  const lab = x.archetype.label.toUpperCase();
+  text(lab, 64, 150, lab.length > 11 ? 5 : 7, col);
+  const p = x.stats.pnlEth;
+  const pnl = `${p >= 0 ? '+' : '-'}${Math.abs(p) >= 10 ? Math.abs(p).toFixed(1) : Math.abs(p).toFixed(2)}`;
+  const ps = pnl.length > 5 ? 9 : 11;
+  const end = text(pnl, 64, 250, ps, p >= 0 ? '#00A804' : '#D93A1F', 3);
+  text('ETH', end + 12, 250 + 7 * (ps + 3) - 7 * 6, 5, '#A8C2B1');
+  const st = x.stats;
+  text(fit(`${st.tokensTraded} TOKENS · WIN ${st.winRate == null ? '?' : st.winRate + '%'}`, 22), 64, 430, 3, '#0E1F15');
+  text(fit(`HOLD ${st.medianHoldMin == null ? '?' : mins(st.medianHoldMin)} · ENTRY ${st.medianEntrySec == null ? '?' : st.medianEntrySec + 'S'}`, 22), 64, 474, 3, '#0E1F15');
+  text(fit(x.crew ? x.crew.toUpperCase() : `${st.buys} BUYS · ${st.sells} SELLS`, 22), 64, 518, 3, '#5B6E61');
+  // right: DNA bars
+  rect(610, 70, 2, 470, '#DFEAE2');
+  text('TRADER DNA', 646, 84, 3, '#5B6E61');
+  [['SNIPER', x.dna.sniper], ['FLIPPER', x.dna.flipper], ['HOLDER', x.dna.holder], ['EXIT LIQ.', x.dna.exitLiquidity], ['BOT', x.dna.bot]].forEach(([k, v], i) => {
+    const y = 144 + i * 74;
+    text(k, 646, y, 3, '#0E1F15');
+    const vs = `${v}`;
+    text(vs, W - 64 - width(vs, 3), y, 3, '#5B6E61');
+    rect(646, y + 34, 490, 12, '#EAF2EC'); rect(646, y + 34, Math.round(490 * v / 100), 12, v >= 60 ? col : '#9DB8A6');
+  });
+  footer(text, width, host);
+  return png(px);
+}

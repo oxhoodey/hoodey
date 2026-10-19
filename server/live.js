@@ -6,6 +6,7 @@ import { fetchJson, log, nameSimilarity, zonedParts, toMinutes, median, isAddres
 import * as ix from './indexer.js';
 import { tokenSummary, ethUsd, historyOf, startPriceWatch } from './dexpaprika.js';
 import { buildMap, scanToken } from './cabal.js';
+import { buildModel, forecast, deathRow, xrayWallet, walletBoard } from './insight.js';
 
 async function rpc(method, params) {
   if (!config.RH_RPC_URL) throw new Error('RH_RPC_URL is not set');
@@ -163,7 +164,9 @@ export async function radar(rangeHours) {
     deployers: new Set(recent.map((l) => l.creator)).size,
     themed: recent.filter((l) => l.ticker).length
   };
-  return { source: 'live', moves, events: moves.filter((m) => m.spike), latest: all.slice(0, 16).map((l) => tokenRow(l, all, creatorCounts, null, vol)),
+  const model = insightModel();
+  const withDeath = (l) => { const r = tokenRow(l, all, creatorCounts, null, vol); const f = forecast(model, l.address); if (f) r.death = { status: f.status, medianLifeMin: f.medianLifeMin, expectedDeathAt: f.expectedDeathAt, diedPct: f.diedPct }; return r; };
+  return { source: 'live', moves, events: moves.filter((m) => m.spike), latest: all.slice(0, 16).map(withDeath),
     timeline: all.filter((l) => l.t >= now - 3600e3).slice(0, 400).map((l) => ({ address: l.address, symbol: l.symbol, at: l.at, risk: tokenRow(l, all, creatorCounts, null, null).risk })),
     stats, hot: { source: 'live', items: hot }, errors };
 }
@@ -401,6 +404,48 @@ export async function cabalScan(address) {
     note: launch ? undefined : `This token launched before the ${config.INDEX_KEEP_HOURS}h window Hoodey keeps, so "early" is measured from the first trade we saw, not the real launch.`,
     ...r
   };
+}
+
+// ── Death Clock + Wallet X-Ray ───────────────────────────────────────────
+let modelCache = { at: 0, v: null };
+function insightModel() {
+  if (modelCache.v && Date.now() - modelCache.at < 60e3) return modelCache.v;
+  const v = buildModel(ix.launches(), ix.trades(), cabalIndex().memberOf);
+  modelCache = { at: Date.now(), v };
+  return v;
+}
+const windowHours = () => { const st = ix.status(); return st.since ? Math.max(1, Math.round((Date.now() - Date.parse(st.since)) / 3600e3)) : config.INDEX_KEEP_HOURS; };
+
+// One box for both: a token address gets its Death Clock, a wallet gets its X-Ray.
+export async function xray(address) {
+  const a = address.toLowerCase();
+  const model = insightModel();
+  const note = ix.status().history !== 'complete' ? 'Hoodey restarted recently and is still loading older blocks, so this may change in a minute.' : undefined;
+  const launch = ix.launchOf(a);
+  if (launch) {
+    const f = forecast(model, a);
+    return { source: 'live', kind: 'token', windowHours: windowHours(), note,
+      token: { address: a, name: launch.name, symbol: launch.symbol, hasImage: !!launch.image, launchedAt: launch.at, creator: launch.creator }, ...f };
+  }
+  const usd = await ethUsd().catch(() => null);
+  const w = xrayWallet(model, a, usd);
+  if (w) return { source: 'live', kind: 'wallet', windowHours: windowHours(), note, ...w };
+  // neither a launch we saw nor a wallet that traded: say which
+  const meta = await tokenMeta(a).catch(() => null);
+  const e = new Error(meta && meta.symbol
+    ? `$${meta.symbol} launched before the ${config.INDEX_KEEP_HOURS}h window Hoodey keeps, so there is no first minute to read. Death Clock works on fresh Pons launches.`
+    : `This wallet made no Pons curve trades in the last ${config.INDEX_KEEP_HOURS}h, so there is nothing to X-ray yet.`);
+  e.code = 'NO_TRADES';
+  throw e;
+}
+
+export async function xrayBoard() {
+  const model = insightModel();
+  const b = walletBoard(model);
+  const dead = [...model.tokens.values()].filter((x) => x.life.dead && x.lifeMin != null);
+  const lives = dead.map((x) => x.lifeMin).sort((p, q) => p - q);
+  return { source: 'live', windowHours: windowHours(), deathRow: deathRow(model), ...b,
+    stats: { launches: model.tokens.size, dead: dead.length, deadPct: model.tokens.size ? Math.round((dead.length / model.tokens.size) * 100) : 0, medianLifeMin: lives.length ? lives[Math.floor(lives.length / 2)] : null, learningFrom: model.resolved.length } };
 }
 
 export { median, isAddress };

@@ -80,3 +80,18 @@ export async function cabalScan(address) {
     return { error: warming ? 'Hoodey is still reading the latest blocks after a restart. Try this scan again in a minute.' : `Couldn't scan this token right now (${e.message.slice(0, 80)}). Try again in a moment.` };
   }
 }
+
+// Death Clock + Wallet X-Ray: one lookup box, a token or a wallet. Never a demo stand-in in live mode.
+export const xrayBoard = () => liveOr('xray:board', () => live.xrayBoard ? live.xrayBoard() : Promise.reject(new Error('X-Ray needs DATA_SOURCE=chain')), () => sample.xrayBoard());
+export async function xray(address) {
+  if (!useLive()) return sample.xray(address);
+  try {
+    if (!live.xray) throw new Error('X-Ray needs DATA_SOURCE=chain');
+    return await cached(`xray:${address.toLowerCase()}`, () => live.xray(address));
+  } catch (e) {
+    if (e.code === 'NO_TRADES') return { error: e.message, status: 404 };
+    log.warn(`live xray ${address} failed:`, e.message);
+    const warming = /catching up|Indexer/i.test(e.message);
+    return { error: warming ? 'Hoodey is still reading the latest blocks after a restart. Try again in a minute.' : `Couldn't read this address right now (${e.message.slice(0, 80)}). Try again in a moment.` };
+  }
+}

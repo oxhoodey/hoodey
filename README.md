@@ -4,6 +4,8 @@ Read-only memecoin intelligence for **Robinhood Chain**. No wallet connection, n
 
 - **Stock → Meme Radar**: when a stock token moves, see every themed memecoin that launches after it.
 - **Copycat Eye**: paste a contract and see which older tokens it copies, plus the deployer's track record.
+- **Cabal Eye**: Cabal Scan scores a launch for snipers, same-block bundles and crews; Cabal Map shows wallet crews that buy together.
+- **X-Ray**: paste a token for its **Death Clock** (how long launches born the same way lived) or a wallet for its **Wallet X-Ray** (sniper, crew, farmer, flipper, exit liquidity, with PnL and trader DNA). Both have share cards for X.
 - **Market Clock**: exchange sessions, overnight gaps, and the hours meme waves start.
 - **Narrative Family Tree**: which token came first on a narrative and which ones cloned it.
 - **Wallet Watch**: paste any address to mirror its meme trading.
@@ -157,6 +159,7 @@ Generated from `server/config.js` by `npm run env:example`. 🔒 = secret, never
 | `FEATURE_RADAR` | `true` | Show Stock → Meme Radar. |
 | `FEATURE_COPYCAT` | `true` | Show Copycat Eye. |
 | `FEATURE_CABAL` | `true` | Show Cabal Eye (Cabal Scan and Cabal Map). |
+| `FEATURE_XRAY` | `true` | Show X-Ray (Death Clock for tokens, Wallet X-Ray for wallets). |
 | `FEATURE_CLOCK` | `true` | Show Market Clock. |
 | `FEATURE_FAMILY` | `true` | Show Narrative Family Tree. |
 | `FEATURE_ROADMAP` | `true` | Show Roadmap. |
@@ -178,6 +181,9 @@ All `GET`, JSON, rate-limited per IP (`RATE_LIMIT_PER_MINUTE`).
 | `/api/radar?range=1\|6\|24` | Stock moves, themed launches, hot narratives, lifespans |
 | `/api/copycat/latest` | Newest launch, its matches and deployer |
 | `/api/copycat/scan?address=0x…` | Same, for any contract |
+| `/api/xray?address=0x…` | Death Clock (token) or Wallet X-Ray (wallet) |
+| `/api/xray/board` | Death Row, smart money and exit-liquidity wallets |
+| `/og/xray/0x….png` | Share card image for X |
 | `/api/clock` | Overnight gaps and launches per hour |
 | `/api/family?stock=TSLA` | Narrative family tree |
 | `/api/wallet?address=0x…` | Wallet Watch result |
