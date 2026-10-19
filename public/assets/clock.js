@@ -1,4 +1,5 @@
 import { initPage, api, html, raw, sourceBadge, every } from './common.js';
+import { createParticleDial } from './particledial.js';
 
 const cfg = await initPage('clock');
 const $ = (id) => document.getElementById(id);
@@ -37,6 +38,7 @@ function arc(fromMin, toMin, color) {
   return `<circle cx="160" cy="160" r="130" fill="none" style="stroke: ${color}" stroke-width="18" stroke-dasharray="${len.toFixed(2)} ${C.toFixed(2)}" transform="rotate(${rot.toFixed(2)} 160 160)"/>`;
 }
 
+let dial = null;
 function tick() {
   const now = new Date();
   const z = zoned(now);
@@ -61,23 +63,21 @@ function tick() {
   const holiday = cfg.holidays.includes(z.date);
   const status = holiday ? 'Closed · holiday' : weekend ? 'Closed · weekend' : NAMES[cur];
   const pill = { pre: 'background:#B9E8A0;color:#0B1A0F', regular: 'background:var(--accent);color:var(--on-accent)', after: 'background:#0F5A2E;color:#fff', closed: 'background:var(--track);color:var(--ink)' }[cur];
-  const deg = ((min + z.s / 60) / 1440) * 360;
   const city = tz.split('/').pop().replace(/_/g, ' ').toUpperCase();
 
-  $('dial').innerHTML = `
-    <svg width="320" height="320" viewBox="0 0 320 320" role="img" aria-label="${city} time ${pad(z.h)}:${pad(z.m)}, ${status}">
-      ${arc(T.after, T.pre, COLORS.closed)}${arc(T.pre, T.open, COLORS.pre)}${arc(T.open, T.close, COLORS.regular)}${arc(T.close, T.after, COLORS.after)}
-      <text x="160" y="20" text-anchor="middle" font-size="11" style="fill: var(--muted)">00</text>
-      <text x="306" y="164" text-anchor="middle" font-size="11" style="fill: var(--muted)">06</text>
-      <text x="160" y="310" text-anchor="middle" font-size="11" style="fill: var(--muted)">12</text>
-      <text x="14" y="164" text-anchor="middle" font-size="11" style="fill: var(--muted)">18</text>
-      <g transform="rotate(${deg.toFixed(2)} 160 160)"><line x1="160" y1="160" x2="160" y2="38" style="stroke: var(--ink)" stroke-width="3" stroke-linecap="round"/><circle cx="160" cy="38" r="6" style="fill: var(--ink)"/></g>
-    </svg>
-    <div class="face">
-      <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.1em" class="muted">${city}</span>
-      <span style="font-weight: 700; font-size: 34px; letter-spacing: -0.02em; line-height: 1.1">${pad(z.h)}:${pad(z.m)}</span>
-      <span class="chip" style="margin-top: 4px; ${pill}">${status}</span>
-    </div>`;
+  // the ring always shows the weekday schedule; the chip says whether it applies today
+  const pattern = (mm) => (mm >= T.pre && mm < T.open ? 'pre' : mm >= T.open && mm < T.close ? 'regular' : mm >= T.close && mm < T.after ? 'after' : 'closed');
+  if (!dial) {
+    $('dial').classList.add('pdial');
+    $('dial').innerHTML = '<div class="pd-face"><span class="pd-city" id="pd-city"></span><span class="pd-time-sr sr-only" id="pd-time"></span><span class="chip pd-chip" id="pd-chip"></span></div>';
+    dial = createParticleDial($('dial'));
+  }
+  dial.update({ minute: min + z.s / 60, time: `${pad(z.h)}:${pad(z.m)}`, sessionOf: pattern });
+  $('dial').setAttribute('role', 'img');
+  $('dial').setAttribute('aria-label', `${city} time ${pad(z.h)}:${pad(z.m)}, ${status}`);
+  $('pd-city').textContent = city;
+  $('pd-chip').textContent = status;
+  $('pd-chip').setAttribute('style', pill);
 
   let localZone = '';
   try { localZone = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch { /* ignore */ }

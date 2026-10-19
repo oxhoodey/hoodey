@@ -1,4 +1,4 @@
-/* HoodEye — soft (neumorphic) light theme in Robinhood Chain green.
+/* Hoodey — soft (neumorphic) light theme in Robinhood Chain green.
    Accent and background colors come from THEME_* variables, injected into :root by the server. */
 :root {
   --bg: #F3F8F4;
@@ -814,3 +814,10 @@ h1, h2, .display, .big, .brand-name, .fx-big, .lx-count b, .pulse .v, .stat .v, 
 @media (max-width: 900px) { .share-wrap { grid-template-columns: 1fr; } }
 
 .pm-bl { top: 3%; bottom: auto; }
+
+/* ── particle dial (Market Clock) ───────────────────────────────────── */
+.dial.pdial { background: none; box-shadow: none; border-radius: 0; }
+.pdial-canvas { position: absolute; inset: 0; display: block; cursor: crosshair; }
+.pd-face { position: absolute; inset: 0; pointer-events: none; }
+.pd-city { position: absolute; left: 0; right: 0; top: 34%; text-align: center; font-family: var(--mono-f); font-size: 11px; letter-spacing: 0.12em; color: var(--muted); }
+.pd-chip { position: absolute; left: 50%; top: 61%; transform: translateX(-50%); font-size: 11px; }

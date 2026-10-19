@@ -1,4 +1,4 @@
-# HoodEye
+# Hoodey
 
 Read-only memecoin intelligence for **Robinhood Chain**. No wallet connection, no signatures.
 
@@ -25,9 +25,9 @@ Open http://localhost:3000. With the defaults (`DATA_MODE=sample`) every page sh
 
 1. **Push to GitHub**
    ```bash
-   git init && git add . && git commit -m "HoodEye"
+   git init && git add . && git commit -m "Hoodey"
    git branch -M main
-   git remote add origin https://github.com/<you>/hoodeye.git
+   git remote add origin https://github.com/<you>/hoodey.git
    git push -u origin main
    ```
 2. **Create the Railway service**: Railway → *New Project* → *Deploy from GitHub repo* → pick the repo. Railway detects Node, runs `npm start`, and checks `/healthz` (see `railway.json`).
@@ -49,7 +49,7 @@ Sample mode needs nothing. For real Robinhood Chain data:
 
 Any section that can't load live data falls back to sample data and is labelled, so the site never breaks. Open `/healthz` to see the mode and RPC block height.
 
-**Live data status.** By default (`DATA_SOURCE=chain`) HoodEye needs no paid API. The server indexes Pons itself over `RH_RPC_URL`: factory launch events (token, curve, creator) and bonding-curve buy/sell events, kept in memory for `INDEX_KEEP_HOURS` (`INDEX_BACKFILL_HOURS` are read on start). Stock token prices and ETH/USD come from DexPaprika's free API. Gap Watch fills in once the server has recorded a price at a market close. Token logos come from the image named in each launch transaction (IPFS through `IPFS_GATEWAY`, Filebase by default, or the deployer's own URL), fetched once by the server and served from `/img/<token>` with browser caching. Holder counts, survival stats and image similarity still show "—" or sample numbers (see the roadmap). `DATA_SOURCE=bitquery` switches back to the older Bitquery setup.
+**Live data status.** By default (`DATA_SOURCE=chain`) Hoodey needs no paid API. The server indexes Pons itself over `RH_RPC_URL`: factory launch events (token, curve, creator) and bonding-curve buy/sell events, kept in memory for `INDEX_KEEP_HOURS` (`INDEX_BACKFILL_HOURS` are read on start). Stock token prices and ETH/USD come from DexPaprika's free API. Gap Watch fills in once the server has recorded a price at a market close. Token logos come from the image named in each launch transaction (IPFS through `IPFS_GATEWAY`, Filebase by default, or the deployer's own URL), fetched once by the server and served from `/img/<token>` with browser caching. Holder counts, survival stats and image similarity still show "—" or sample numbers (see the roadmap). `DATA_SOURCE=bitquery` switches back to the older Bitquery setup.
 
 ### Alerts on Telegram
 
@@ -69,13 +69,13 @@ Generated from `server/config.js` by `npm run env:example`. 🔒 = secret, never
 | **App** | | |
 | `PORT` | `3000` | Port the server listens on. Railway sets this for you; leave it empty there. |
 | `NODE_ENV` | `production` | production or development. |
-| `APP_NAME` | `HoodEye` | Name shown in the header, page titles and alerts. |
+| `APP_NAME` | `Hoodey` | Name shown in the header, page titles and alerts. |
 | `APP_TAGLINE` | `Eyes on every meme, before the market blinks.` | Short line used in page descriptions and link previews. |
-| `PUBLIC_URL` | _empty_ | Public address of the site, e.g. https://hoodeye.up.railway.app. Used for link previews. |
+| `PUBLIC_URL` | _empty_ | Public address of the site, e.g. https://hoodey.up.railway.app. Used for link previews. |
 | `LOG_LEVEL` | `info` | How much the server logs. Options: `debug`, `info`, `warn`, `error`. |
 | **Data** | | |
 | `DATA_MODE` | `sample` | sample = built-in demo data, no keys needed. live = read Robinhood Chain (see DATA_SOURCE); any section that cannot load falls back to sample and says so. Options: `sample`, `live`. |
-| `DATA_SOURCE` | `chain` | Where live data comes from. chain = HoodEye reads Pons launches and trades itself over RH_RPC_URL and takes prices from DexPaprika (free, no keys). bitquery = the older Bitquery setup (needs BITQUERY_API_KEY and uses its points). Options: `chain`, `bitquery`. |
+| `DATA_SOURCE` | `chain` | Where live data comes from. chain = Hoodey reads Pons launches and trades itself over RH_RPC_URL and takes prices from DexPaprika (free, no keys). bitquery = the older Bitquery setup (needs BITQUERY_API_KEY and uses its points). Options: `chain`, `bitquery`. |
 | `CACHE_TTL_SECONDS` | `30` | How long API answers are cached on the server. |
 | `REFRESH_INTERVAL_SECONDS` | `60` | How often open pages refresh their data. |
 | `REQUEST_TIMEOUT_MS` | `10000` | Timeout for calls to Bitquery and the RPC. |
@@ -136,7 +136,7 @@ Generated from `server/config.js` by `npm run env:example`. 🔒 = secret, never
 | **Alerts** | | |
 | `TELEGRAM_BOT_USERNAME` | _empty_ | Bot or channel username without @. The "Get alerts" button opens t.me/<this>. |
 | `TELEGRAM_BOT_TOKEN` 🔒 | _empty_ | Bot token from @BotFather. Needed only for the server to post alerts. |
-| `TELEGRAM_CHAT_ID` | _empty_ | Channel or group ID the server posts alerts to, e.g. @hoodeye_alerts or -100… |
+| `TELEGRAM_CHAT_ID` | _empty_ | Channel or group ID the server posts alerts to, e.g. @hoodey_alerts or -100… |
 | `ALERTS_ENABLED` | `false` | Post spike alerts to Telegram. |
 | `ALERT_MIN_MOVE_PCT` | `5` | Only alert on stock moves of at least this many percent. |
 | `OPENING_BELL_BRIEF_ENABLED` | `false` | Post a brief to Telegram before the regular session opens. |
@@ -146,8 +146,8 @@ Generated from `server/config.js` by `npm run env:example`. 🔒 = secret, never
 | `LINK_TELEGRAM` | _empty_ | Telegram community URL. |
 | `LINK_DOCS` | _empty_ | Docs URL. |
 | `ROADMAP_VOTE_URL` | _empty_ | Where the "Vote on the roadmap" button goes. Hidden when empty. |
-| `TOKEN_CONTRACT_ADDRESS` | _empty_ | $HOODEYE contract address, shown in the footer when set. |
-| `TOKEN_BUY_URL` | _empty_ | Link to buy $HOODEYE, shown in the footer when set. |
+| `TOKEN_CONTRACT_ADDRESS` | _empty_ | $HOODEY contract address, shown in the footer when set. |
+| `TOKEN_BUY_URL` | _empty_ | Link to buy $HOODEY, shown in the footer when set. |
 | **Theme** | | |
 | `THEME_ACCENT` | `#00C805` | Main accent color (buttons, gauges, bars). |
 | `THEME_ACCENT_INK` | `#078A33` | Darker accent used for text and chart lines on white. |
@@ -200,4 +200,4 @@ railway.json   start command and health check for Railway
 
 ## Disclaimer
 
-HoodEye reads public on-chain data and labels patterns; it does not give financial advice. "Copycat", "farm pattern" and risk labels are heuristics, not proof.
+Hoodey reads public on-chain data and labels patterns; it does not give financial advice. "Copycat", "farm pattern" and risk labels are heuristics, not proof.

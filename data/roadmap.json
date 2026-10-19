@@ -34,9 +34,9 @@
       "name": "Vision",
       "tag": "exploring",
       "items": [
-        { "title": "$HOODEYE holder tiers", "desc": "Faster alerts and early access. Proven with an optional one-time signed message, never a transaction.", "status": "Research" },
+        { "title": "$HOODEY holder tiers", "desc": "Faster alerts and early access. Proven with an optional one-time signed message, never a transaction.", "status": "Research" },
         { "title": "Every launchpad", "desc": "Pons, Pools and whatever launches next on Robinhood Chain.", "status": "Research" },
-        { "title": "Public API", "desc": "HoodEye signals for bots, dashboards and other builders.", "status": "Research" }
+        { "title": "Public API", "desc": "Hoodey signals for bots, dashboards and other builders.", "status": "Research" }
       ]
     }
   ],

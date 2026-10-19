@@ -1,4 +1,4 @@
-// Every setting HoodEye uses lives here, read from environment variables.
+// Every setting Hoodey uses lives here, read from environment variables.
 // On Railway, set them under the service's "Variables" tab.
 // This list is also the source for .env.example (run `npm run env:example`).
 
@@ -6,14 +6,14 @@ export const VARIABLES = [
   // ── App ──────────────────────────────────────────────────────────────
   { group: 'App', name: 'PORT', type: 'int', default: 3000, desc: 'Port the server listens on. Railway sets this for you; leave it empty there.' },
   { group: 'App', name: 'NODE_ENV', type: 'string', default: 'production', desc: 'production or development.' },
-  { group: 'App', name: 'APP_NAME', type: 'string', default: 'HoodEye', public: true, desc: 'Name shown in the header, page titles and alerts.' },
+  { group: 'App', name: 'APP_NAME', type: 'string', default: 'Hoodey', public: true, desc: 'Name shown in the header, page titles and alerts.' },
   { group: 'App', name: 'APP_TAGLINE', type: 'string', default: 'Eyes on every meme, before the market blinks.', public: true, desc: 'Short line used in page descriptions and link previews.' },
-  { group: 'App', name: 'PUBLIC_URL', type: 'string', default: '', public: true, desc: 'Public address of the site, e.g. https://hoodeye.up.railway.app. Used for link previews.' },
+  { group: 'App', name: 'PUBLIC_URL', type: 'string', default: '', public: true, desc: 'Public address of the site, e.g. https://hoodey.up.railway.app. Used for link previews.' },
   { group: 'App', name: 'LOG_LEVEL', type: 'enum', options: ['debug', 'info', 'warn', 'error'], default: 'info', desc: 'How much the server logs.' },
 
   // ── Data ─────────────────────────────────────────────────────────────
   { group: 'Data', name: 'DATA_MODE', type: 'enum', options: ['sample', 'live'], default: 'sample', public: true, desc: 'sample = built-in demo data, no keys needed. live = read Robinhood Chain (see DATA_SOURCE); any section that cannot load falls back to sample and says so.' },
-  { group: 'Data', name: 'DATA_SOURCE', type: 'enum', options: ['chain', 'bitquery'], default: 'chain', desc: 'Where live data comes from. chain = HoodEye reads Pons launches and trades itself over RH_RPC_URL and takes prices from DexPaprika (free, no keys). bitquery = the older Bitquery setup (needs BITQUERY_API_KEY and uses its points).' },
+  { group: 'Data', name: 'DATA_SOURCE', type: 'enum', options: ['chain', 'bitquery'], default: 'chain', desc: 'Where live data comes from. chain = Hoodey reads Pons launches and trades itself over RH_RPC_URL and takes prices from DexPaprika (free, no keys). bitquery = the older Bitquery setup (needs BITQUERY_API_KEY and uses its points).' },
   { group: 'Data', name: 'CACHE_TTL_SECONDS', type: 'int', default: 30, desc: 'How long API answers are cached on the server.' },
   { group: 'Data', name: 'REFRESH_INTERVAL_SECONDS', type: 'int', default: 60, public: true, desc: 'How often open pages refresh their data.' },
   { group: 'Data', name: 'REQUEST_TIMEOUT_MS', type: 'int', default: 10000, desc: 'Timeout for calls to Bitquery and the RPC.' },
@@ -80,7 +80,7 @@ export const VARIABLES = [
   // ── Alerts (Telegram) ────────────────────────────────────────────────
   { group: 'Alerts', name: 'TELEGRAM_BOT_USERNAME', type: 'string', default: '', public: true, desc: 'Bot or channel username without @. The "Get alerts" button opens t.me/<this>.' },
   { group: 'Alerts', name: 'TELEGRAM_BOT_TOKEN', type: 'string', default: '', secret: true, desc: 'Bot token from @BotFather. Needed only for the server to post alerts.' },
-  { group: 'Alerts', name: 'TELEGRAM_CHAT_ID', type: 'string', default: '', desc: 'Channel or group ID the server posts alerts to, e.g. @hoodeye_alerts or -100…' },
+  { group: 'Alerts', name: 'TELEGRAM_CHAT_ID', type: 'string', default: '', desc: 'Channel or group ID the server posts alerts to, e.g. @hoodey_alerts or -100…' },
   { group: 'Alerts', name: 'ALERTS_ENABLED', type: 'bool', default: false, desc: 'Post spike alerts to Telegram.' },
   { group: 'Alerts', name: 'ALERT_MIN_MOVE_PCT', type: 'float', default: 5, desc: 'Only alert on stock moves of at least this many percent.' },
   { group: 'Alerts', name: 'OPENING_BELL_BRIEF_ENABLED', type: 'bool', default: false, desc: 'Post a brief to Telegram before the regular session opens.' },
@@ -91,8 +91,8 @@ export const VARIABLES = [
   { group: 'Links', name: 'LINK_TELEGRAM', type: 'string', default: '', public: true, desc: 'Telegram community URL.' },
   { group: 'Links', name: 'LINK_DOCS', type: 'string', default: '', public: true, desc: 'Docs URL.' },
   { group: 'Links', name: 'ROADMAP_VOTE_URL', type: 'string', default: '', public: true, desc: 'Where the "Vote on the roadmap" button goes. Hidden when empty.' },
-  { group: 'Links', name: 'TOKEN_CONTRACT_ADDRESS', type: 'string', default: '', public: true, desc: '$HOODEYE contract address, shown in the footer when set.' },
-  { group: 'Links', name: 'TOKEN_BUY_URL', type: 'string', default: '', public: true, desc: 'Link to buy $HOODEYE, shown in the footer when set.' },
+  { group: 'Links', name: 'TOKEN_CONTRACT_ADDRESS', type: 'string', default: '', public: true, desc: '$HOODEY contract address, shown in the footer when set.' },
+  { group: 'Links', name: 'TOKEN_BUY_URL', type: 'string', default: '', public: true, desc: 'Link to buy $HOODEY, shown in the footer when set.' },
 
   // ── Theme ────────────────────────────────────────────────────────────
   { group: 'Theme', name: 'THEME_ACCENT', type: 'color', default: '#00C805', public: true, desc: 'Main accent color (buttons, gauges, bars).' },

@@ -256,8 +256,8 @@ export async function copycat(address) {
 
   return {
     source: 'live',
-    note: [token.at ? '' : `This token launched before the ${config.INDEX_KEEP_HOURS}h window HoodEye keeps, so it is compared with recent launches only.`,
-      ix.status().history !== 'complete' ? 'HoodEye restarted recently and is still loading older launches, so matches and deployer history may grow in a minute.' : ''].filter(Boolean).join(' ') || undefined,
+    note: [token.at ? '' : `This token launched before the ${config.INDEX_KEEP_HOURS}h window Hoodey keeps, so it is compared with recent launches only.`,
+      ix.status().history !== 'complete' ? 'Hoodey restarted recently and is still loading older launches, so matches and deployer history may grow in a minute.' : ''].filter(Boolean).join(' ') || undefined,
     token: {
       name: token.name, symbol: token.symbol, address: token.address, launchpad: token.launchpad, launchedAt: token.at,
       hasImage: !!token.image, links: token.links || null,
@@ -376,7 +376,7 @@ export async function cabalMap() {
   const hours = st.since ? Math.max(1, Math.round((Date.now() - Date.parse(st.since)) / 3600e3)) : config.INDEX_KEEP_HOURS;
   const entries = m.crews.filter((c) => c.active).flatMap((c) => c.tokens.filter((t) => t.t && Date.now() - t.t < 3600e3).map((t) => ({ crew: c.id, members: t.members, ...t }))).sort((a, b) => b.t - a.t).slice(0, 12);
   return { source: 'live', windowHours: hours, scannedLaunches: m.scannedLaunches, crews: m.crews.slice(0, config.CABAL_MAP_MAX), totalCrews: m.crews.length, entries,
-    note: st.history !== 'complete' ? 'HoodEye restarted recently and is still loading older launches, so crews may grow in a minute.' : undefined };
+    note: st.history !== 'complete' ? 'Hoodey restarted recently and is still loading older launches, so crews may grow in a minute.' : undefined };
 }
 
 export async function cabalScan(address) {
@@ -391,14 +391,14 @@ export async function cabalScan(address) {
   }
   const meta = launch || (await tokenMeta(a).catch(() => ({ name: '', symbol: '' })));
   if (!r.stats.buyers) {
-    const e = new Error(`Only sells of $${meta.symbol || 'this token'} in the last ${config.INDEX_KEEP_HOURS}h, no buys to scan. It launched before HoodEye's window, so its early buyers are out of reach.`);
+    const e = new Error(`Only sells of $${meta.symbol || 'this token'} in the last ${config.INDEX_KEEP_HOURS}h, no buys to scan. It launched before Hoodey's window, so its early buyers are out of reach.`);
     e.code = 'NO_TRADES';
     throw e;
   }
   return {
     source: 'live',
     token: { address: a, name: meta.name || meta.symbol, symbol: meta.symbol, hasImage: !!(launch && launch.image), launchedAt: launch ? launch.at : null, creator: launch ? launch.creator : null },
-    note: launch ? undefined : `This token launched before the ${config.INDEX_KEEP_HOURS}h window HoodEye keeps, so "early" is measured from the first trade we saw, not the real launch.`,
+    note: launch ? undefined : `This token launched before the ${config.INDEX_KEEP_HOURS}h window Hoodey keeps, so "early" is measured from the first trade we saw, not the real launch.`,
     ...r
   };
 }

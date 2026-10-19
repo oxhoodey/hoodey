@@ -32,9 +32,9 @@ function privateIp(ip) {
 
 async function checkUrl(url) {
   const u = new URL(url);
-  if (!/^https?:$/.test(u.protocol) || (u.port && !['80', '443'].includes(u.port) && process.env.HOODEYE_TEST_ALLOW_PRIVATE !== '1')) throw new Error('unsupported URL');
+  if (!/^https?:$/.test(u.protocol) || (u.port && !['80', '443'].includes(u.port) && process.env.HOODEY_TEST_ALLOW_PRIVATE !== '1')) throw new Error('unsupported URL');
   const addrs = await dns.lookup(u.hostname, { all: true });
-  if (!addrs.length || (addrs.some((a) => privateIp(a.address)) && process.env.HOODEYE_TEST_ALLOW_PRIVATE !== '1')) throw new Error('blocked host');
+  if (!addrs.length || (addrs.some((a) => privateIp(a.address)) && process.env.HOODEY_TEST_ALLOW_PRIVATE !== '1')) throw new Error('blocked host');
   return u;
 }
 
@@ -46,7 +46,7 @@ async function safeFetch(url) {
     let r, next = url;
     for (let hop = 0; hop < 4; hop++) {
       const u = await checkUrl(next);
-      r = await fetch(u, { signal: ctrl.signal, redirect: 'manual', headers: { 'User-Agent': 'HoodEye/1.0 (+token logos)', Accept: 'image/*' } });
+      r = await fetch(u, { signal: ctrl.signal, redirect: 'manual', headers: { 'User-Agent': 'Hoodey/1.0 (+token logos)', Accept: 'image/*' } });
       if (r.status >= 300 && r.status < 400 && r.headers.get('location')) { next = new URL(r.headers.get('location'), u).href; continue; }
       break;
     }

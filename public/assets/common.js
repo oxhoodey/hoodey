@@ -1,7 +1,7 @@
 // Shared header, footer, helpers and settings for every page.
 import { startBackground } from './bg.js';
 
-export const LOGO = '<svg width="30" height="30" viewBox="0 0 390.85 390.85" role="img" aria-label="HoodEye logo"><path fill="#0B1F14" d="M348.15,216.78c0,96.14-77.93,174.07-174.07,174.07C77.93,390.85,0,312.92,0,216.78S77.93,42.7,174.07,42.7v43.86c-71.93,0-130.22,58.29-130.22,130.22c0,71.93,58.29,130.22,130.22,130.22c71.93,0,130.22-58.29,130.22-130.22H348.15z"/><path style="fill:var(--accent)" d="M390.85,216.78h-42.7c0-96.14-77.93-174.07-174.07-174.07V0C293.79,0,390.85,97.06,390.85,216.78z"/><path style="fill:var(--accent)" d="M254.75,216.78c0,44.57-36.14,80.67-80.68,80.67c-44.57,0-80.67-36.1-80.67-80.67c0-44.53,36.1-80.67,80.67-80.67v80.67H254.75z"/></svg>';
+export const LOGO = '<svg width="30" height="30" viewBox="0 0 390.85 390.85" role="img" aria-label="Hoodey logo"><path fill="#0B1F14" d="M348.15,216.78c0,96.14-77.93,174.07-174.07,174.07C77.93,390.85,0,312.92,0,216.78S77.93,42.7,174.07,42.7v43.86c-71.93,0-130.22,58.29-130.22,130.22c0,71.93,58.29,130.22,130.22,130.22c71.93,0,130.22-58.29,130.22-130.22H348.15z"/><path style="fill:var(--accent)" d="M390.85,216.78h-42.7c0-96.14-77.93-174.07-174.07-174.07V0C293.79,0,390.85,97.06,390.85,216.78z"/><path style="fill:var(--accent)" d="M254.75,216.78c0,44.57-36.14,80.67-80.68,80.67c-44.57,0-80.67-36.1-80.67-80.67c0-44.53,36.1-80.67,80.67-80.67v80.67H254.75z"/></svg>';
 export const LOGO_PATHS = { ring: 'M348.15,216.78c0,96.14-77.93,174.07-174.07,174.07C77.93,390.85,0,312.92,0,216.78S77.93,42.7,174.07,42.7v43.86c-71.93,0-130.22,58.29-130.22,130.22c0,71.93,58.29,130.22,130.22,130.22c71.93,0,130.22-58.29,130.22-130.22H348.15z', arc: 'M390.85,216.78h-42.7c0-96.14-77.93-174.07-174.07-174.07V0C293.79,0,390.85,97.06,390.85,216.78z', core: 'M254.75,216.78c0,44.57-36.14,80.67-80.68,80.67c-44.57,0-80.67-36.1-80.67-80.67c0-44.53,36.1-80.67,80.67-80.67v80.67H254.75z' };
 
 const ICONS = {
@@ -141,7 +141,7 @@ export async function initPage(current) {
 
   const foot = document.querySelector('footer.foot');
   if (foot) {
-    const links = [['X', cfg.LINK_X], ['Telegram', cfg.LINK_TELEGRAM], ['Docs', cfg.LINK_DOCS], ['Buy $HOODEYE', cfg.TOKEN_BUY_URL]]
+    const links = [['X', cfg.LINK_X], ['Telegram', cfg.LINK_TELEGRAM], ['Docs', cfg.LINK_DOCS], ['Buy $HOODEY', cfg.TOKEN_BUY_URL]]
       .filter(([, u]) => u).map(([t, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)}</a>`).join('');
     const ca = cfg.TOKEN_CONTRACT_ADDRESS ? `<span>CA <code>${esc(cfg.TOKEN_CONTRACT_ADDRESS)}</code></span>` : '';
     foot.innerHTML = `<span>${esc(cfg.APP_NAME)} reads public on-chain data. Read-only, never asks for a signature. Not financial advice.${cfg.DATA_MODE === 'sample' ? ' Currently showing sample data.' : ''}</span>${ca}<nav aria-label="Links">${links}</nav>`;

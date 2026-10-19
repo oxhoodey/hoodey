@@ -173,7 +173,7 @@ function renderOrbit(latest) {
   fresh.slice(0, 4).reverse().forEach((t, i) => setTimeout(() => mark.launch(t.risk), i * 700));
   if (list[0]) {
     mark.setLabel(list[0].symbol, list[0].risk, list[0].at);
-    stage.setAttribute('aria-label', `The HoodEye mark drawn in dots. Newest Pons launch: $${list[0].symbol}.`);
+    stage.setAttribute('aria-label', `The Hoodey mark drawn in dots. Newest Pons launch: $${list[0].symbol}.`);
   }
 }
 if (!reduceMotion) setTimeout(() => mark.launch('low'), 1400); // first arrival once the mark has formed

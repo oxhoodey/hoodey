@@ -96,7 +96,7 @@ export function cabalCard(scan, host) {
   for (let y = 18; y < H; y += 24) for (let x = 18; x < W; x += 24) rect(x, y, 2, 2, '#E4EEE7');
   rect(0, 0, W, 12, col);
   // left: brand, token, score
-  text('HOODEYE · CABAL SCAN', 64, 52, 3, '#067A2E');
+  text('HOODEY · CABAL SCAN', 64, 52, 3, '#067A2E');
   const sym = '$' + fit(scan.token.symbol || '?', 10);
   text(sym, 64, 92, sym.length > 7 ? 7 : 9, '#0E1F15');
   text(fit(scan.token.name || '', 26), 64, 182, 3, '#5B6E61');
@@ -127,7 +127,7 @@ export function defaultCard() {
   for (let y = 18; y < H; y += 24) for (let x = 18; x < W; x += 24) rect(x, y, 2, 2, '#E4EEE7');
   rect(0, 0, W, 12, '#00C805');
   text('ROBINHOOD CHAIN · PONS', 64, 70, 3, '#067A2E');
-  text('HOODEYE', 64, 130, 16, '#0E1F15', 4);
+  text('HOODEY', 64, 130, 16, '#0E1F15', 4);
   text('STOCKS MOVE.', 64, 330, 7, '#0E1F15');
   text('MEMES FOLLOW.', 64, 410, 7, '#0E1F15');
   text('WE SEE BOTH.', 64, 490, 7, '#00A804');

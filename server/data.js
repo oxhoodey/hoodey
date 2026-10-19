@@ -42,7 +42,7 @@ export async function copycatScan(address) {
     log.warn(`live copycat scan ${address} failed:`, e.message);
     const warming = /catching up|Indexer/i.test(e.message);
     if (/No contract/i.test(e.message)) return null;
-    return { error: warming ? 'HoodEye is still reading the latest blocks after a restart. Try this scan again in a minute.' : `Couldn't read this token from Robinhood Chain right now (${e.message.slice(0, 80)}). Try again in a moment.` };
+    return { error: warming ? 'Hoodey is still reading the latest blocks after a restart. Try this scan again in a minute.' : `Couldn't read this token from Robinhood Chain right now (${e.message.slice(0, 80)}). Try again in a moment.` };
   }
 }
 
@@ -77,6 +77,6 @@ export async function cabalScan(address) {
     if (e.code === 'NO_TRADES') return { error: e.message, status: 404 };
     log.warn(`live cabal scan ${address} failed:`, e.message);
     const warming = /catching up|Indexer/i.test(e.message);
-    return { error: warming ? 'HoodEye is still reading the latest blocks after a restart. Try this scan again in a minute.' : `Couldn't scan this token right now (${e.message.slice(0, 80)}). Try again in a moment.` };
+    return { error: warming ? 'Hoodey is still reading the latest blocks after a restart. Try this scan again in a minute.' : `Couldn't scan this token right now (${e.message.slice(0, 80)}). Try again in a moment.` };
   }
 }

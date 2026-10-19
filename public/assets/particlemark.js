@@ -1,4 +1,4 @@
-// Particle mark: the HoodEye logo drawn with a few thousand dots.
+// Particle mark: the Hoodey logo drawn with a few thousand dots.
 // Dots spring back to their place in the logo, scatter away from the cursor, and every new
 // Pons launch sends a small comet of green dots flying into the mark. The newest launch's
 // ticker is written in dots too, bottom right; when a new one lands, the old ticker shatters
