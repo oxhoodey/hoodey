@@ -390,6 +390,11 @@ export async function cabalScan(address) {
     throw e;
   }
   const meta = launch || (await tokenMeta(a).catch(() => ({ name: '', symbol: '' })));
+  if (!r.stats.buyers) {
+    const e = new Error(`Only sells of $${meta.symbol || 'this token'} in the last ${config.INDEX_KEEP_HOURS}h, no buys to scan. It launched before HoodEye's window, so its early buyers are out of reach.`);
+    e.code = 'NO_TRADES';
+    throw e;
+  }
   return {
     source: 'live',
     token: { address: a, name: meta.name || meta.symbol, symbol: meta.symbol, hasImage: !!(launch && launch.image), launchedAt: launch ? launch.at : null, creator: launch ? launch.creator : null },

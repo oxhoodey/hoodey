@@ -140,8 +140,10 @@ $('scan-form').addEventListener('submit', (ev) => {
 $('hot-btn').addEventListener('click', async () => {
   try {
     const t = await api('/api/trending');
-    const top = t.rows && t.rows[0];
-    if (!top) throw new Error('No hot token right now.');
+    // the hottest token we can actually scan: launched inside the window, with real buyers
+    const rows = t.rows || [];
+    const top = rows.find((r) => r.launchedAt && r.buys >= 5) || rows.find((r) => r.buys > 0);
+    if (!top) throw new Error('No hot token with buyers right now.');
     $('ca').value = top.address;
     history.replaceState(null, '', `?address=${top.address}`);
     run(top.address);
