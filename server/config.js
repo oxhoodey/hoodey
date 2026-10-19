@@ -7,7 +7,7 @@ export const VARIABLES = [
   { group: 'App', name: 'PORT', type: 'int', default: 3000, desc: 'Port the server listens on. Railway sets this for you; leave it empty there.' },
   { group: 'App', name: 'NODE_ENV', type: 'string', default: 'production', desc: 'production or development.' },
   { group: 'App', name: 'APP_NAME', type: 'string', default: 'Hoodey', public: true, desc: 'Name shown in the header, page titles and alerts.' },
-  { group: 'App', name: 'APP_TAGLINE', type: 'string', default: 'Eyes on every meme, before the market blinks.', public: true, desc: 'Short line used in page descriptions and link previews.' },
+  { group: 'App', name: 'APP_TAGLINE', type: 'string', default: "Every launch has a cabal. Every token has a clock. Don't be their exit.", public: true, desc: 'Short line used in page descriptions and link previews.' },
   { group: 'App', name: 'PUBLIC_URL', type: 'string', default: '', public: true, desc: 'Public address of the site, e.g. https://hoodey.up.railway.app. Used for link previews.' },
   { group: 'App', name: 'LOG_LEVEL', type: 'enum', options: ['debug', 'info', 'warn', 'error'], default: 'info', desc: 'How much the server logs.' },
 

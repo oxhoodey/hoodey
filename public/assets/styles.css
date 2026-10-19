@@ -956,3 +956,8 @@ a.xt-row:hover { box-shadow: 0 0 0 1.5px var(--accent); }
 .ctag.crew { display: inline-block; padding: 3px 8px; gap: 0; border-radius: 8px 2px; box-shadow: none; background: #0B2014; color: #7CF08A; text-decoration: none; }
 .wb-row .mono { white-space: nowrap; }
 .lc-death b { white-space: nowrap; }
+/* homepage hook: three lines that stay on one line each on desktop */
+.display.xl.hook { font-size: clamp(36px, 4.1vw, 60px); }
+.display.xl.hook .hl { display: block; }
+@media (min-width: 761px) { .display.xl.hook .hl { white-space: nowrap; } }
+@media (max-width: 760px) { .display.xl.hook { font-size: clamp(32px, 9vw, 44px); } }

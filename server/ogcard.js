@@ -128,9 +128,9 @@ export function defaultCard() {
   rect(0, 0, W, 12, '#00C805');
   text('ROBINHOOD CHAIN · PONS', 64, 70, 3, '#067A2E');
   text('HOODEY', 64, 130, 16, '#0E1F15', 4);
-  text('STOCKS MOVE.', 64, 330, 7, '#0E1F15');
-  text('MEMES FOLLOW.', 64, 410, 7, '#0E1F15');
-  text('WE SEE BOTH.', 64, 490, 7, '#00A804');
+  text('EVERY LAUNCH HAS A CABAL.', 64, 330, 6, '#0E1F15');
+  text('EVERY TOKEN HAS A CLOCK.', 64, 405, 6, '#0E1F15');
+  text("DON'T BE THEIR EXIT.", 64, 480, 6, '#00A804');
   text('READ-ONLY · NO WALLET NEEDED', 64, 580, 3, '#5B6E61');
   return png(px);
 }

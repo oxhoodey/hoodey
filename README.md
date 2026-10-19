@@ -72,7 +72,7 @@ Generated from `server/config.js` by `npm run env:example`. 🔒 = secret, never
 | `PORT` | `3000` | Port the server listens on. Railway sets this for you; leave it empty there. |
 | `NODE_ENV` | `production` | production or development. |
 | `APP_NAME` | `Hoodey` | Name shown in the header, page titles and alerts. |
-| `APP_TAGLINE` | `Eyes on every meme, before the market blinks.` | Short line used in page descriptions and link previews. |
+| `APP_TAGLINE` | `Every launch has a cabal. Every token has a clock. Don't be their exit.` | Short line used in page descriptions and link previews. |
 | `PUBLIC_URL` | _empty_ | Public address of the site, e.g. https://hoodey.up.railway.app. Used for link previews. |
 | `LOG_LEVEL` | `info` | How much the server logs. Options: `debug`, `info`, `warn`, `error`. |
 | **Data** | | |
