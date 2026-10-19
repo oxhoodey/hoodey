@@ -173,13 +173,18 @@ Generated from `server/config.js` by `npm run env:example`. 🔒 = secret, never
 | `FEATURE_WALLET_WATCH` | `true` | Show the Wallet Watch box on the radar. |
 | **Security** | | |
 | `RATE_LIMIT_PER_MINUTE` | `120` | API requests allowed per visitor IP per minute. |
+| `ALLOWED_HOSTS` | _empty_ | Domains allowed to serve Hoodey, comma separated (e.g. hoodey-production.up.railway.app,hoodey.xyz). The PUBLIC_URL domain is always allowed. Requests for any other domain are sent to PUBLIC_URL, and copies of the site opened elsewhere show a "this is a copy" notice. |
+| `COPY_LOCK` | `true` | Pages opened on a domain that is not ours (a saved or mirrored copy) stop working and point visitors to the real site. |
+| `API_GUARD` | `true` | The API only answers pages served by this server: each page carries a signed key that expires after 2 days. Copied frontends that call our API get nothing. |
+| `GUARD_SECRET` 🔒 | _empty_ | Secret used to sign page keys. Set any long random text so keys survive restarts; if empty a new one is made on every start. |
+| `HOTLINK_GUARD` | `true` | Other websites cannot embed our scripts, styles, token images or share cards. X and Telegram previews still work. |
 | `CORS_ORIGINS` | _empty_ | Other sites allowed to call the API, comma separated. Empty = same site only. |
 | `TRUST_PROXY` | `true` | Read the visitor IP from X-Forwarded-For (correct behind Railway). |
 <!-- ENV:END -->
 
 ## API
 
-All `GET`, JSON, rate-limited per IP (`RATE_LIMIT_PER_MINUTE`).
+All `GET`, JSON, rate-limited per IP (`RATE_LIMIT_PER_MINUTE`). With `API_GUARD=true` (default) the API answers only Hoodey's own pages: each page carries a signed key (`X-Hoodey-K`). Sites listed in `CORS_ORIGINS` skip the key.
 
 | Endpoint | Returns |
 |---|---|

@@ -117,6 +117,11 @@ export const VARIABLES = [
 
   // ── Security ─────────────────────────────────────────────────────────
   { group: 'Security', name: 'RATE_LIMIT_PER_MINUTE', type: 'int', default: 120, desc: 'API requests allowed per visitor IP per minute.' },
+  { group: 'Security', name: 'ALLOWED_HOSTS', type: 'string', default: '', desc: 'Domains allowed to serve Hoodey, comma separated (e.g. hoodey-production.up.railway.app,hoodey.xyz). The PUBLIC_URL domain is always allowed. Requests for any other domain are sent to PUBLIC_URL, and copies of the site opened elsewhere show a "this is a copy" notice.' },
+  { group: 'Security', name: 'COPY_LOCK', type: 'bool', default: true, desc: 'Pages opened on a domain that is not ours (a saved or mirrored copy) stop working and point visitors to the real site.' },
+  { group: 'Security', name: 'API_GUARD', type: 'bool', default: true, desc: 'The API only answers pages served by this server: each page carries a signed key that expires after 2 days. Copied frontends that call our API get nothing.' },
+  { group: 'Security', name: 'GUARD_SECRET', type: 'string', default: '', secret: true, desc: 'Secret used to sign page keys. Set any long random text so keys survive restarts; if empty a new one is made on every start.' },
+  { group: 'Security', name: 'HOTLINK_GUARD', type: 'bool', default: true, desc: 'Other websites cannot embed our scripts, styles, token images or share cards. X and Telegram previews still work.' },
   { group: 'Security', name: 'CORS_ORIGINS', type: 'string', default: '', desc: 'Other sites allowed to call the API, comma separated. Empty = same site only.' },
   { group: 'Security', name: 'TRUST_PROXY', type: 'bool', default: true, desc: 'Read the visitor IP from X-Forwarded-For (correct behind Railway).' }
 ];
@@ -184,6 +189,7 @@ export const config = {
   famousDomains: new Set(String(values.LARP_FAMOUS_DOMAINS || '').split(',').map((x) => x.trim().replace(/^www\./, '').toLowerCase()).filter(Boolean)),
   keywords: parseKeywords(values.STOCK_KEYWORDS),
   holidays: String(values.MARKET_HOLIDAYS).split(',').map((s) => s.trim()).filter((s) => /^\d{4}-\d{2}-\d{2}$/.test(s)),
+  allowedHosts: String(values.ALLOWED_HOSTS || '').split(',').map((x) => x.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '')).filter(Boolean),
   corsOrigins: String(values.CORS_ORIGINS).split(',').map((s) => s.trim()).filter(Boolean),
   liveReady: values.DATA_MODE === 'live' && (values.DATA_SOURCE === 'bitquery' ? !!values.BITQUERY_API_KEY : !!values.RH_RPC_URL),
   warnings

@@ -62,13 +62,21 @@ export const isAddress = (s) => /^0x[0-9a-fA-F]{40}$/.test(String(s || '').trim(
 
 // ── settings & API ────────────────────────────────────────────────────
 let cfgPromise;
+const metaOf = (n) => { const m = typeof document !== 'undefined' && document.querySelector(`meta[name="${n}"]`); return m ? m.content : ''; };
 export function getConfig() {
-  if (!cfgPromise) cfgPromise = fetch('/api/config').then((r) => r.json());
+  if (!cfgPromise) cfgPromise = api('/api/config');
   return cfgPromise;
 }
 
+// Pages carry a signed key from the server; the API answers only requests that send it back.
 export async function api(path) {
-  const r = await fetch(path, { headers: { Accept: 'application/json' } });
+  const r = await fetch(path, { headers: { Accept: 'application/json', 'X-Hoodey-K': metaOf('hoodey-k') } });
+  if (r.status === 401) {
+    // key expired (page open for days, or the server's secret changed): reload once for a fresh one
+    let tried = false;
+    try { tried = sessionStorage.getItem('hoodey.rk') === '1'; sessionStorage.setItem('hoodey.rk', '1'); } catch { tried = true; }
+    if (!tried) { location.reload(); return new Promise(() => {}); }
+  } else { try { sessionStorage.removeItem('hoodey.rk'); } catch { /* ignore */ } }
   let body = {};
   try { body = await r.json(); } catch { /* empty */ }
   if (!r.ok) throw new Error(body.error || `Request failed (${r.status})`);
@@ -128,7 +136,21 @@ export function every(cfg, fn) {
 }
 
 // ── header & footer ───────────────────────────────────────────────────
+// A copy of this page opened on someone else's domain stops here and points to the real site.
+function copyLock() {
+  const raw = metaOf('hoodey-h');
+  if (!raw) return false;
+  let hosts = [];
+  try { hosts = JSON.parse(atob(raw)); } catch { return false; }
+  const here = location.host.toLowerCase();
+  if (!hosts.length || hosts.includes(here) || /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(here)) return false;
+  const real = `https://${hosts[0]}${location.pathname}`;
+  document.documentElement.innerHTML = `<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Unofficial copy</title></head><body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#F7FAF8;font-family:system-ui,sans-serif;color:#0E1F15"><main style="max-width:460px;padding:32px;text-align:center"><h1 style="font-size:28px;margin:0 0 12px">This is an unofficial copy.</h1><p style="color:#5B6E61;line-height:1.5">This page copies Hoodey's design but isn't run by Hoodey, so its data can't be trusted. Never connect a wallet or sign anything here.</p><a href="${real.replace(/"/g, '')}" style="display:inline-block;margin-top:16px;padding:12px 22px;border-radius:14px 4px;background:#00C805;color:#0B1A0F;font-weight:700;text-decoration:none">Go to the real Hoodey</a></main></body>`;
+  return true;
+}
+
 export async function initPage(current) {
+  if (copyLock()) return new Promise(() => {});
   const cfg = await getConfig();
   const header = document.querySelector('header.top');
   const nav = NAV.filter((n) => cfg.features[n.key]).map((n) => `<a href="${n.href}"${n.key === current ? ' aria-current="page"' : ''}>${ICONS[n.key]}${esc(n.label)}</a>`).join('');

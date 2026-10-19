@@ -7,6 +7,7 @@ import { log, isAddress } from './util.js';
 import * as data from './data.js';
 import { startAlerts } from './alerts.js';
 import { tokenImage } from './images.js';
+import { hostAllowed, canonicalUrl, pageKey, keyValid, fromOtherSite, lockMeta } from './guard.js';
 import { cabalCard, deathCard, xrayCard, larpCard } from './ogcard.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -100,7 +101,8 @@ async function renderPage(req, res, file, pathname, url) {
     .replaceAll('{{APP_TAGLINE}}', escHtml(config.APP_TAGLINE))
     .replaceAll('{{CANONICAL}}', escHtml(base + pathname))
     .replaceAll('{{OG_IMAGE}}', escHtml(ogImage))
-    .replace('{{THEME_STYLE}}', themeStyle());
+    .replace('{{THEME_STYLE}}', themeStyle())
+    .replace('</head>', `<meta name="hoodey-k" content="${pageKey(req)}">${config.COPY_LOCK ? `<meta name="hoodey-h" content="${lockMeta(req)}">` : ''}\n</head>`);
   send(res, 200, html, { 'Content-Type': MIME['.html'], 'Cache-Control': 'no-cache' });
 }
 
@@ -143,6 +145,10 @@ async function api(req, res, url) {
   const cors = corsHeaders(req);
   if (req.method === 'OPTIONS') return send(res, 204, '', { ...cors, 'Access-Control-Allow-Methods': 'GET', 'Access-Control-Allow-Headers': 'Content-Type' });
   if (req.method !== 'GET') return json(res, 405, { error: 'Only GET is supported' }, cors);
+  if (config.API_GUARD && !(req.headers.origin && config.corsOrigins.includes(req.headers.origin))) {
+    if (fromOtherSite(req)) return json(res, 403, { error: 'The Hoodey API only answers hoodey pages.' });
+    if (!keyValid(req)) return json(res, 401, { error: 'Page key expired. Reload the page.', code: 'stale' });
+  }
   if (limited(req)) return json(res, 429, { error: 'Too many requests, slow down a little.' }, { ...cors, 'Retry-After': '60' });
 
   const f = publicConfig().features;
@@ -228,6 +234,15 @@ const server = http.createServer(async (req, res) => {
   try { url = new URL(req.url, 'http://localhost'); } catch { return send(res, 400, 'Bad request'); }
   try {
     const p = url.pathname.replace(/\/+$/, '') || '/';
+    // a domain that isn't ours (a mirror or a pointed domain): send people to the real site
+    if (p !== '/healthz' && !hostAllowed(req)) {
+      if (p.startsWith('/api/')) return json(res, 403, { error: 'Unofficial mirror.' });
+      return send(res, 301, '', { Location: canonicalUrl(req, url.pathname + url.search) });
+    }
+    // other websites may not embed our code, styles, logos or share cards
+    if (config.HOTLINK_GUARD && (p.startsWith('/assets/') || p.startsWith('/img/') || p.startsWith('/og/')) && fromOtherSite(req) && req.headers['sec-fetch-dest'] !== 'document') {
+      return send(res, 403, '', { 'Cache-Control': 'no-store' });
+    }
     if (p === '/healthz') {
       return json(res, 200, { ok: true, mode: config.DATA_MODE, source: config.DATA_SOURCE, liveReady: config.liveReady, uptimeSec: Math.round((Date.now() - startedAt) / 1000), chain: await data.chainStatus().catch(() => ({})) });
     }
