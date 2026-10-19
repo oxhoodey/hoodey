@@ -703,3 +703,20 @@ h1, h2, .display, .big, .brand-name, .fx-big, .lx-count b, .pulse .v, .stat .v, 
   .top .ro-badge { display: none; }
   .top { gap: 8px; }
 }
+
+/* ── hero: particle mark (replaces the eye + orbiting chips) ─────────── */
+.pmark-stage { position: relative; width: min(100%, 540px); aspect-ratio: 1.08; }
+#pmark { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; touch-action: pan-y; }
+.pm-cap { position: absolute; display: flex; gap: 10px; align-items: flex-start; pointer-events: none; font-family: var(--mono-f); }
+.pm-cap span { display: flex; flex-direction: column; line-height: 1.25; }
+.pm-cap b { font-family: var(--font); font-size: 14px; font-weight: 700; color: var(--ink); letter-spacing: -0.01em; }
+.pm-cap small { font-size: 11px; color: var(--muted); letter-spacing: 0.02em; }
+.pm-cap i { width: 8px; height: 8px; margin-top: 5px; background: var(--accent); border-radius: 3px 1px; flex: none; }
+.pm-tr { right: 2%; top: 4%; text-align: right; flex-direction: row-reverse; }
+.pm-tr span { align-items: flex-end; }
+.pm-bl { left: 2%; bottom: 3%; max-width: 60%; }
+.pm-bl b { font-size: 13px; }
+@media (max-width: 760px) {
+  .pmark-stage { width: 100%; aspect-ratio: 1; }
+  .pm-bl { display: none; }
+}

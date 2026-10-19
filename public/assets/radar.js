@@ -1,4 +1,5 @@
 import { initPage, api, html, raw, esc, fmtInt, fmtUsd, fmtPct, fmtDuration, timeAgo, sourceBadge, every, isAddress, explorerLink, ponsLink, avatar } from './common.js';
+import { createParticleMark } from './particlemark.js';
 import { createHotField, fmtPrice, METRICS } from './hotfield.js';
 import { createLaunchTape } from './launchtape.js';
 
@@ -160,53 +161,21 @@ function renderPulse(stats) {
   $('pulse-window').textContent = `Launches · ${w >= 23.5 ? '24h' : w >= 1 ? 'last ' + Math.round(w) + 'h' : 'last hour'}`;
 }
 
-// ── the eye: iris follows the cursor, blinks on new launches ─────────
-const iris = $('iris'), sclera = $('sclera'), stage = $('eye-stage');
-const look = { x: 0, y: 0, tx: 0, ty: 0 };
-window.addEventListener('pointermove', (e) => {
-  const r = sclera.getBoundingClientRect();
-  const dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
-  const d = Math.hypot(dx, dy) || 1, max = r.width * 0.09, k = Math.min(1, d / 400);
-  look.tx = (dx / d) * max * k; look.ty = (dy / d) * max * k;
-}, { passive: true });
-function blink() {
-  sclera.classList.add('blinking');
-  setTimeout(() => sclera.classList.remove('blinking'), 140);
-}
-(function idleBlink() { setTimeout(() => { blink(); idleBlink(); }, 4000 + Math.random() * 5000); })();
-
-// ── orbiting chips: the latest launches circle the eye ────────────────
-let orbs = [];
-const knownOrb = new Set();
+// ── particle mark: the logo in dots; every new launch flies in ───────
+const mark = createParticleMark($('pmark'));
+const stage = $('eye-stage');
+const knownMark = new Set();
 function renderOrbit(latest) {
-  const list = (latest || []).slice(0, window.innerWidth < 760 ? 7 : 10);
-  const freshOnes = list.filter((t) => !knownOrb.has(t.address));
-  const first = knownOrb.size === 0;
-  $('orbit').innerHTML = list.map((t) => html`<a class="chip-orb${raw(!first && freshOnes.includes(t) ? ' fresh' : '')}" href="/copycat?address=${t.address}" title="${t.name} · ${timeAgo(t.at)}${t.copycat ? ' · copy of $' + t.copycat.of : ''}"><i class="${raw(t.risk || 'low')}"></i>$${t.symbol}<small>${t.copycat ? 'copy' : t.ticker || ''}</small></a>`).join('');
-  orbs = [...$('orbit').children].map((el, i) => ({ el, base: (i / list.length) * Math.PI * 2 }));
-  list.forEach((t) => knownOrb.add(t.address));
-  if (!first && freshOnes.length) blink();
-  stage.setAttribute('aria-label', `The HoodEye watching ${list.length} latest Pons launches. Newest: ${list[0] ? '$' + list[0].symbol : 'none'}.`);
-}
-
-function frame(ts) {
-  look.x += (look.tx - look.x) * 0.12; look.y += (look.ty - look.y) * 0.12;
-  iris.style.transform = `translate(${look.x.toFixed(2)}px, ${look.y.toFixed(2)}px)`;
-  const w = stage.clientWidth, h = stage.clientHeight;
-  const rx = w * 0.43, ry = h * 0.4, cx = w / 2, cy = h / 2;
-  const spin = reduceMotion ? 0 : ts * 0.00006;
-  for (const o of orbs) {
-    const a = o.base + spin;
-    const depth = (Math.sin(a) + 1) / 2; // 0 = back, 1 = front
-    const x = cx + Math.cos(a) * rx - o.el.offsetWidth / 2;
-    const y = cy + Math.sin(a) * ry - o.el.offsetHeight / 2;
-    o.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) scale(${(0.82 + depth * 0.22).toFixed(3)})`;
-    o.el.style.opacity = (0.55 + depth * 0.45).toFixed(2);
-    o.el.style.zIndex = depth > 0.45 ? 3 : 1;
+  const list = latest || [];
+  const fresh = knownMark.size ? list.filter((t) => !knownMark.has(t.address)) : [];
+  list.forEach((t) => knownMark.add(t.address));
+  fresh.slice(0, 4).reverse().forEach((t, i) => setTimeout(() => mark.launch(t.risk), i * 700));
+  if (list[0]) {
+    $('pm-sym').textContent = '$' + list[0].symbol;
+    stage.setAttribute('aria-label', `The HoodEye mark drawn in dots. Newest Pons launch: $${list[0].symbol}.`);
   }
-  requestAnimationFrame(frame);
 }
-requestAnimationFrame(frame);
+if (!reduceMotion) setTimeout(() => mark.launch('low'), 1400); // first arrival once the mark has formed
 
 // ── stream: new launches drip in one by one, ages tick every second ──
 const streamSeen = new Set();
