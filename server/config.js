@@ -60,6 +60,15 @@ export const VARIABLES = [
   { group: 'Token images', name: 'IMAGE_MAX_KB', type: 'int', default: 3072, desc: 'Largest logo file the server will fetch.' },
   { group: 'Token images', name: 'IMAGE_TIMEOUT_MS', type: 'int', default: 8000, desc: 'Timeout for fetching one logo.' },
 
+  // ── Cabal Eye ────────────────────────────────────────────────────────
+  { group: 'Cabal Eye', name: 'CABAL_EARLY_SECONDS', type: 'int', default: 60, public: true, desc: 'Seconds after launch that count as "early" buying.' },
+  { group: 'Cabal Eye', name: 'CABAL_SNIPER_SECONDS', type: 'int', default: 10, public: true, desc: 'A first buy within this many seconds of launch is tagged Sniper.' },
+  { group: 'Cabal Eye', name: 'CABAL_EARLY_MAX', type: 'int', default: 25, desc: 'Most early buyers looked at per launch.' },
+  { group: 'Cabal Eye', name: 'CABAL_MIN_SHARED', type: 'int', default: 3, public: true, desc: 'Cabal Map: two wallets are linked when they bought early in at least this many of the same launches.' },
+  { group: 'Cabal Eye', name: 'CABAL_MIN_MEMBERS', type: 'int', default: 3, desc: 'Cabal Map: smallest crew shown.' },
+  { group: 'Cabal Eye', name: 'CABAL_MAX_WALLETS', type: 'int', default: 40, desc: 'Cabal Scan: most wallets listed.' },
+  { group: 'Cabal Eye', name: 'CABAL_MAP_MAX', type: 'int', default: 24, desc: 'Cabal Map: most crews listed.' },
+
   // ── Market Clock ─────────────────────────────────────────────────────
   { group: 'Market Clock', name: 'MARKET_TIMEZONE', type: 'string', default: 'America/New_York', public: true, desc: 'Time zone of the exchange.' },
   { group: 'Market Clock', name: 'MARKET_PREMARKET_OPEN', type: 'time', default: '04:00', public: true, desc: 'Pre-market start, HH:MM in exchange time.' },
@@ -94,6 +103,7 @@ export const VARIABLES = [
   // ── Features ─────────────────────────────────────────────────────────
   { group: 'Features', name: 'FEATURE_RADAR', type: 'bool', default: true, public: true, desc: 'Show Stock → Meme Radar.' },
   { group: 'Features', name: 'FEATURE_COPYCAT', type: 'bool', default: true, public: true, desc: 'Show Copycat Eye.' },
+  { group: 'Features', name: 'FEATURE_CABAL', type: 'bool', default: true, public: true, desc: 'Show Cabal Eye (Cabal Scan and Cabal Map).' },
   { group: 'Features', name: 'FEATURE_CLOCK', type: 'bool', default: true, public: true, desc: 'Show Market Clock.' },
   { group: 'Features', name: 'FEATURE_FAMILY', type: 'bool', default: true, public: true, desc: 'Show Narrative Family Tree.' },
   { group: 'Features', name: 'FEATURE_ROADMAP', type: 'bool', default: true, public: true, desc: 'Show Roadmap.' },
@@ -184,6 +194,7 @@ export function publicConfig() {
     features: {
       radar: config.FEATURE_RADAR,
       copycat: config.FEATURE_COPYCAT,
+      cabal: config.FEATURE_CABAL,
       clock: config.FEATURE_CLOCK,
       family: config.FEATURE_FAMILY,
       roadmap: config.FEATURE_ROADMAP,

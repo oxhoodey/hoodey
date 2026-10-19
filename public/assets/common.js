@@ -5,6 +5,7 @@ export const LOGO = '<svg width="30" height="30" viewBox="0 0 390.85 390.85" rol
 export const LOGO_PATHS = { ring: 'M348.15,216.78c0,96.14-77.93,174.07-174.07,174.07C77.93,390.85,0,312.92,0,216.78S77.93,42.7,174.07,42.7v43.86c-71.93,0-130.22,58.29-130.22,130.22c0,71.93,58.29,130.22,130.22,130.22c71.93,0,130.22-58.29,130.22-130.22H348.15z', arc: 'M390.85,216.78h-42.7c0-96.14-77.93-174.07-174.07-174.07V0C293.79,0,390.85,97.06,390.85,216.78z', core: 'M254.75,216.78c0,44.57-36.14,80.67-80.68,80.67c-44.57,0-80.67-36.1-80.67-80.67c0-44.53,36.1-80.67,80.67-80.67v80.67H254.75z' };
 
 const ICONS = {
+  cabal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="6" cy="7" r="2.5"/><circle cx="18" cy="7" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M8.3 8.2 L10.6 15.8 M15.7 8.2 L13.4 15.8 M8.5 7 H15.5"/></svg>',
   radar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 12 L19 5"/></svg>',
   copycat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="11" height="11" rx="2"/><rect x="10" y="10" width="11" height="11" rx="2"/></svg>',
   clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7 V12 L15.5 14"/></svg>',
@@ -14,6 +15,7 @@ const ICONS = {
 const NAV = [
   { key: 'radar', href: '/', label: 'Radar' },
   { key: 'copycat', href: '/copycat', label: 'Copycat' },
+  { key: 'cabal', href: '/cabal', label: 'Cabal' },
   { key: 'clock', href: '/clock', label: 'Clock' },
   { key: 'family', href: '/family', label: 'Family' },
   { key: 'roadmap', href: '/roadmap', label: 'Roadmap' }

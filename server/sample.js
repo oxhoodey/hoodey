@@ -2,6 +2,8 @@
 // Every answer is marked source: "sample" so the UI can label it.
 import { config } from './config.js';
 import { hashString, seededRandom, isAddress } from './util.js';
+import { buildMap, scanToken } from './cabal.js';
+
 
 const MIN = 60 * 1000;
 const ago = (minutes) => new Date(Date.now() - minutes * MIN).toISOString();
@@ -222,4 +224,61 @@ export function trending() {
     };
   });
   return { source: 'sample', windowMin: 45, totalTrades: 1840, rows };
+}
+
+// ── Cabal Eye demo: a small simulated market run through the real detector ──
+let cabalWorld = null;
+function world() {
+  if (cabalWorld && Date.now() - cabalWorld.at < 10 * 60e3) return cabalWorld;
+  const rnd = seededRandom(4663);
+  const now = Date.now();
+  const w = (tag, i) => fakeAddr(tag + i);
+  const crews = [[0, 1, 2, 3, 4].map((i) => w('crewA', i)), [0, 1, 2, 3].map((i) => w('crewB', i)), [0, 1, 2].map((i) => w('crewC', i))];
+  const retail = Array.from({ length: 60 }, (_, i) => w('retail', i));
+  const names = [['Tesla Doge', 'TDOGE'], ['Night Owl', 'NOCT'], ['Hero Cat', 'HERO'], ['Moon Duck', 'MDUCK'], ['Elon Fart', 'EF'], ['Pond Life', 'POND'], ['Green Candle', 'GRN'], ['Chip Ban Frog', 'CBFROG'], ['Saylor Moon', 'SAYLR'], ['Base Boy', 'BBOY'], ['Q3 Beat', 'BEAT'], ['Red Rocket', 'RROCK'], ['Hood Frog', 'HFROG'], ['Aveno', 'AVENO'], ['Eko Terminal', 'EKO'], ['Stonk Cat', 'SCAT'], ['Gamma Dog', 'GDOG'], ['Cyber Pup', 'CPUP']];
+  const launches = [], trades = [];
+  let block = 92000000;
+  names.forEach(([name, symbol], i) => {
+    const t = now - (names.length - i) * 18 * 60e3 + 5 * 60e3;
+    const creator = i % 4 === 0 ? w('farmer', 0) : w('dev', i);
+    const address = fakeAddr(symbol + 'L');
+    block += 9000;
+    launches.push({ address, name, symbol, creator, t, at: new Date(t).toISOString(), block, image: null });
+    let price = 2e-9;
+    const push = (trader, side, sec, eth, sameBlock) => {
+      const amount = eth / price;
+      price *= side === 'buy' ? 1 + eth * 0.9 : 1 - eth * 0.8;
+      trades.push({ t: t + sec * 1000, block: sameBlock || block + Math.round(sec * 10), token: address, side, eth, amount, priceEth: eth / amount, trader, tx: '0x' + hashString(trader + sec + symbol).toString(16) });
+    };
+    // crews snipe some launches together, often in one block
+    crews.forEach((crew, ci) => {
+      if ((i + ci) % (ci === 0 ? 2 : 3) !== 0) return;
+      const b = block + 3 + ci;
+      crew.forEach((m, k) => push(m, 'buy', 0.3 + ci * 0.2 + (k > 2 ? 2 : 0), 0.15 + rnd() * 0.3, k <= 2 ? b : null));
+      if (i % 3 !== 2) crew.forEach((m, k) => push(m, 'sell', 400 + k * 30 + ci * 60, 0.2 + rnd() * 0.4));
+    });
+    if (creator === w('farmer', 0)) push(creator, 'buy', 1.2, 0.4);
+    const n = 18 + Math.floor(rnd() * 25);
+    for (let k = 0; k < n; k++) push(retail[Math.floor(rnd() * retail.length)], rnd() < 0.7 ? 'buy' : 'sell', 4 + rnd() * 1500, 0.01 + rnd() * 0.12);
+  });
+  trades.sort((a, b) => a.block - b.block || a.t - b.t);
+  cabalWorld = { at: now, launches: launches.sort((a, b) => b.t - a.t), trades };
+  cabalWorld.map = buildMap(cabalWorld.launches, trades);
+  return cabalWorld;
+}
+
+export function cabalMap() {
+  const W = world();
+  const entries = W.map.crews.filter((c) => c.active).flatMap((c) => c.tokens.filter((t) => Date.now() - t.t < 3600e3).map((t) => ({ crew: c.id, members: t.members, ...t }))).slice(0, 12);
+  return { source: 'sample', windowHours: 6, scannedLaunches: W.map.scannedLaunches, crews: W.map.crews, totalCrews: W.map.crews.length, entries };
+}
+
+export function cabalScan(address) {
+  if (!isAddress(address)) return null;
+  const W = world();
+  const known = W.launches.find((l) => l.address === address.toLowerCase());
+  const l = known || W.launches[hashString(address.toLowerCase()) % 3 === 0 ? 2 : 0];
+  const r = scanToken(l.address, l, W.launches, W.trades, W.map);
+  return { source: 'sample', note: known ? undefined : 'Sample mode: this is demo data, not the token at this address.',
+    token: { address: l.address, name: l.name, symbol: l.symbol, hasImage: false, launchedAt: l.at, creator: l.creator }, ...r };
 }

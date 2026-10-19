@@ -118,6 +118,14 @@ Generated from `server/config.js` by `npm run env:example`. 🔒 = secret, never
 | `IMAGE_CACHE_MB` | `64` | Memory the server may use to keep token logos. |
 | `IMAGE_MAX_KB` | `3072` | Largest logo file the server will fetch. |
 | `IMAGE_TIMEOUT_MS` | `8000` | Timeout for fetching one logo. |
+| **Cabal Eye** | | |
+| `CABAL_EARLY_SECONDS` | `60` | Seconds after launch that count as "early" buying. |
+| `CABAL_SNIPER_SECONDS` | `10` | A first buy within this many seconds of launch is tagged Sniper. |
+| `CABAL_EARLY_MAX` | `25` | Most early buyers looked at per launch. |
+| `CABAL_MIN_SHARED` | `3` | Cabal Map: two wallets are linked when they bought early in at least this many of the same launches. |
+| `CABAL_MIN_MEMBERS` | `3` | Cabal Map: smallest crew shown. |
+| `CABAL_MAX_WALLETS` | `40` | Cabal Scan: most wallets listed. |
+| `CABAL_MAP_MAX` | `24` | Cabal Map: most crews listed. |
 | **Market Clock** | | |
 | `MARKET_TIMEZONE` | `America/New_York` | Time zone of the exchange. |
 | `MARKET_PREMARKET_OPEN` | `04:00` | Pre-market start, HH:MM in exchange time. |
@@ -148,6 +156,7 @@ Generated from `server/config.js` by `npm run env:example`. 🔒 = secret, never
 | **Features** | | |
 | `FEATURE_RADAR` | `true` | Show Stock → Meme Radar. |
 | `FEATURE_COPYCAT` | `true` | Show Copycat Eye. |
+| `FEATURE_CABAL` | `true` | Show Cabal Eye (Cabal Scan and Cabal Map). |
 | `FEATURE_CLOCK` | `true` | Show Market Clock. |
 | `FEATURE_FAMILY` | `true` | Show Narrative Family Tree. |
 | `FEATURE_ROADMAP` | `true` | Show Roadmap. |

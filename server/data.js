@@ -64,3 +64,19 @@ export const trending = () => liveOr('trending', () => live.trending(), () => sa
 
 // Image URL named in a token's launch transaction (chain source only).
 export const imageUrlOf = (token) => (useLive() && live.imageUrlOf ? live.imageUrlOf(token) : null);
+
+// Cabal Eye. Like Copycat scans, a scan never swaps in a demo token in live mode.
+export const cabalMap = () => liveOr('cabal:map', () => live.cabalMap ? live.cabalMap() : Promise.reject(new Error('Cabal Map needs DATA_SOURCE=chain')), () => sample.cabalMap());
+export async function cabalScan(address) {
+  if (!useLive()) return sample.cabalScan(address);
+  try {
+    if (!live.cabalScan) throw new Error('Cabal Scan needs DATA_SOURCE=chain');
+    return await cached(`cabal:${address.toLowerCase()}`, () => live.cabalScan(address));
+  } catch (e) {
+    if (/No contract/i.test(e.message)) return null;
+    if (e.code === 'NO_TRADES') return { error: e.message, status: 404 };
+    log.warn(`live cabal scan ${address} failed:`, e.message);
+    const warming = /catching up|Indexer/i.test(e.message);
+    return { error: warming ? 'HoodEye is still reading the latest blocks after a restart. Try this scan again in a minute.' : `Couldn't scan this token right now (${e.message.slice(0, 80)}). Try again in a moment.` };
+  }
+}

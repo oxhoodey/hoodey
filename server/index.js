@@ -15,6 +15,7 @@ const startedAt = Date.now();
 const PAGES = {
   '/': { file: 'radar.html', feature: 'radar' },
   '/copycat': { file: 'copycat.html', feature: 'copycat' },
+  '/cabal': { file: 'cabal.html', feature: 'cabal' },
   '/clock': { file: 'clock.html', feature: 'clock' },
   '/family': { file: 'family.html', feature: 'family' },
   '/roadmap': { file: 'roadmap.html', feature: 'roadmap' }
@@ -139,6 +140,17 @@ async function api(req, res, url) {
       if (!isAddress(a)) return needAddress();
       const out = await data.copycatScan(a);
       if (out && out.error) return json(res, 503, out, cors);
+      return out ? json(res, 200, out, cors) : json(res, 404, { error: 'No token contract at this address on Robinhood Chain.' }, cors);
+    }
+    case '/api/cabal/map':
+      if (!f.cabal) return off('Cabal Eye');
+      return json(res, 200, await data.cabalMap(), cors);
+    case '/api/cabal/scan': {
+      if (!f.cabal) return off('Cabal Eye');
+      const a = (q.get('address') || '').trim();
+      if (!isAddress(a)) return needAddress();
+      const out = await data.cabalScan(a);
+      if (out && out.error) return json(res, out.status || 503, { error: out.error }, cors);
       return out ? json(res, 200, out, cors) : json(res, 404, { error: 'No token contract at this address on Robinhood Chain.' }, cors);
     }
     case '/api/clock':

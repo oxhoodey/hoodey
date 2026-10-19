@@ -5,6 +5,7 @@ import { config } from './config.js';
 import { fetchJson, log, nameSimilarity, zonedParts, toMinutes, median, isAddress } from './util.js';
 import * as ix from './indexer.js';
 import { tokenSummary, ethUsd, historyOf, startPriceWatch } from './dexpaprika.js';
+import { buildMap, scanToken } from './cabal.js';
 
 async function rpc(method, params) {
   if (!config.RH_RPC_URL) throw new Error('RH_RPC_URL is not set');
@@ -358,6 +359,43 @@ export async function wallet(address) {
   const st = ix.status();
   const hours = st.since ? Math.max(1, Math.round((Date.now() - Date.parse(st.since)) / 3600e3)) : config.INDEX_KEEP_HOURS;
   return { source: 'live', address: a, days: +(hours / 24).toFixed(1), window: `${hours}h`, label: 'Net Pons trade flow', netEth, netUsd, tslaShares, spyPct: null, trades: mine.length };
+}
+
+// ── Cabal Eye ────────────────────────────────────────────────────────────
+let mapCache = { at: 0, v: null };
+function cabalIndex() {
+  if (mapCache.v && Date.now() - mapCache.at < 60e3) return mapCache.v;
+  const v = buildMap(ix.launches(), ix.trades());
+  mapCache = { at: Date.now(), v };
+  return v;
+}
+
+export async function cabalMap() {
+  const m = cabalIndex();
+  const st = ix.status();
+  const hours = st.since ? Math.max(1, Math.round((Date.now() - Date.parse(st.since)) / 3600e3)) : config.INDEX_KEEP_HOURS;
+  const entries = m.crews.filter((c) => c.active).flatMap((c) => c.tokens.filter((t) => t.t && Date.now() - t.t < 3600e3).map((t) => ({ crew: c.id, members: t.members, ...t }))).sort((a, b) => b.t - a.t).slice(0, 12);
+  return { source: 'live', windowHours: hours, scannedLaunches: m.scannedLaunches, crews: m.crews.slice(0, config.CABAL_MAP_MAX), totalCrews: m.crews.length, entries,
+    note: st.history !== 'complete' ? 'HoodEye restarted recently and is still loading older launches, so crews may grow in a minute.' : undefined };
+}
+
+export async function cabalScan(address) {
+  const a = address.toLowerCase();
+  const launch = ix.launchOf(a);
+  const r = scanToken(a, launch, ix.launches(), ix.trades(), cabalIndex());
+  if (!r) {
+    const meta = await tokenMeta(a); // throws "No contract" for non-contracts
+    const e = new Error(`No Pons trades for $${meta.symbol || 'this token'} in the last ${config.INDEX_KEEP_HOURS}h, so there is nothing to scan yet.`);
+    e.code = 'NO_TRADES';
+    throw e;
+  }
+  const meta = launch || (await tokenMeta(a).catch(() => ({ name: '', symbol: '' })));
+  return {
+    source: 'live',
+    token: { address: a, name: meta.name || meta.symbol, symbol: meta.symbol, hasImage: !!(launch && launch.image), launchedAt: launch ? launch.at : null, creator: launch ? launch.creator : null },
+    note: launch ? undefined : `This token launched before the ${config.INDEX_KEEP_HOURS}h window HoodEye keeps, so "early" is measured from the first trade we saw, not the real launch.`,
+    ...r
+  };
 }
 
 export { median, isAddress };
