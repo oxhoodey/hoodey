@@ -88,7 +88,7 @@ export const VARIABLES = [
   // ── Theme ────────────────────────────────────────────────────────────
   { group: 'Theme', name: 'THEME_ACCENT', type: 'color', default: '#00C805', public: true, desc: 'Main accent color (buttons, gauges, bars).' },
   { group: 'Theme', name: 'THEME_ACCENT_INK', type: 'color', default: '#078A33', public: true, desc: 'Darker accent used for text and chart lines on white.' },
-  { group: 'Theme', name: 'THEME_BG', type: 'color', default: '#F3F8F4', public: true, desc: 'Page background.' },
+  { group: 'Theme', name: 'THEME_BG', type: 'color', default: '#F7FAF8', public: true, desc: 'Page background.' },
   { group: 'Theme', name: 'BG_ANIMATION_ENABLED', type: 'bool', default: true, public: true, desc: 'Animated 3D dot field behind the pages.' },
 
   // ── Features ─────────────────────────────────────────────────────────

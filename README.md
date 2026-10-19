@@ -143,7 +143,7 @@ Generated from `server/config.js` by `npm run env:example`. 🔒 = secret, never
 | **Theme** | | |
 | `THEME_ACCENT` | `#00C805` | Main accent color (buttons, gauges, bars). |
 | `THEME_ACCENT_INK` | `#078A33` | Darker accent used for text and chart lines on white. |
-| `THEME_BG` | `#F3F8F4` | Page background. |
+| `THEME_BG` | `#F7FAF8` | Page background. |
 | `BG_ANIMATION_ENABLED` | `true` | Animated 3D dot field behind the pages. |
 | **Features** | | |
 | `FEATURE_RADAR` | `true` | Show Stock → Meme Radar. |
