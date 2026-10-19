@@ -11,6 +11,7 @@ import { tokenImage } from './images.js';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PUBLIC = path.join(ROOT, 'public');
 const startedAt = Date.now();
+const BUILD = startedAt.toString(36); // changes on every deploy/restart
 
 const PAGES = {
   '/': { file: 'radar.html', feature: 'radar' },
@@ -94,7 +95,9 @@ async function renderPage(res, file, pathname) {
   send(res, 200, html, { 'Content-Type': MIME['.html'], 'Cache-Control': 'no-cache' });
 }
 
-async function serveStatic(res, pathname) {
+// Code and styles are revalidated on every load (cheap 304 when unchanged), so a new deploy
+// reaches every browser at once. Images and fonts can be cached longer.
+async function serveStatic(req, res, pathname) {
   const target = path.normalize(path.join(PUBLIC, pathname));
   if (!target.startsWith(PUBLIC + path.sep)) return false;
   try {
@@ -102,8 +105,11 @@ async function serveStatic(res, pathname) {
     if (!stat.isFile()) return false;
     const ext = path.extname(target).toLowerCase();
     if (ext === '.html') return false;
+    const etag = `W/"${stat.size.toString(16)}-${Math.floor(stat.mtimeMs).toString(16)}-${BUILD}"`;
+    const cache = ['.js', '.css', '.json', '.webmanifest'].includes(ext) ? 'no-cache' : 'public, max-age=86400';
+    if (req.headers['if-none-match'] === etag) { send(res, 304, '', { ETag: etag, 'Cache-Control': cache }); return true; }
     const body = await fs.readFile(target);
-    send(res, 200, body, { 'Content-Type': MIME[ext] || 'application/octet-stream', 'Cache-Control': 'public, max-age=3600' });
+    send(res, 200, body, { 'Content-Type': MIME[ext] || 'application/octet-stream', 'Cache-Control': cache, ETag: etag });
     return true;
   } catch {
     return false;
@@ -202,7 +208,7 @@ const server = http.createServer(async (req, res) => {
       }
       return await renderPage(res, page.file, p === '/' ? '/' : p);
     }
-    if (await serveStatic(res, url.pathname)) return;
+    if (await serveStatic(req, res, url.pathname)) return;
     send(res, 404, 'Not found', { 'Content-Type': 'text/plain; charset=utf-8' });
   } catch (e) {
     log.error(req.method, url.pathname, e.stack || e.message);
