@@ -812,3 +812,5 @@ h1, h2, .display, .big, .brand-name, .fx-big, .lx-count b, .pulse .v, .stat .v, 
 .share-side .btn { width: 100%; }
 .btn svg { flex: none; }
 @media (max-width: 900px) { .share-wrap { grid-template-columns: 1fr; } }
+
+.pm-bl { top: 3%; bottom: auto; }

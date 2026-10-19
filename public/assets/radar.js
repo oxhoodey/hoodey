@@ -163,6 +163,7 @@ function renderPulse(stats) {
 
 // ── particle mark: the logo in dots; every new launch flies in ───────
 const mark = createParticleMark($('pmark'));
+if (/[?&]pmdebug/.test(location.search)) window.__mark = mark; // lets us test the ticker morph
 const stage = $('eye-stage');
 const knownMark = new Set();
 function renderOrbit(latest) {
@@ -171,7 +172,7 @@ function renderOrbit(latest) {
   list.forEach((t) => knownMark.add(t.address));
   fresh.slice(0, 4).reverse().forEach((t, i) => setTimeout(() => mark.launch(t.risk), i * 700));
   if (list[0]) {
-    $('pm-sym').textContent = '$' + list[0].symbol;
+    mark.setLabel(list[0].symbol, list[0].risk, list[0].at);
     stage.setAttribute('aria-label', `The HoodEye mark drawn in dots. Newest Pons launch: $${list[0].symbol}.`);
   }
 }
