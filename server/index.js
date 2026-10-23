@@ -237,7 +237,7 @@ const server = http.createServer(async (req, res) => {
     // a domain that isn't ours (a mirror or a pointed domain): send people to the real site
     if (p !== '/healthz' && !hostAllowed(req)) {
       if (p.startsWith('/api/')) return json(res, 403, { error: 'Unofficial mirror.' });
-      return send(res, 301, '', { Location: canonicalUrl(req, url.pathname + url.search) });
+      return send(res, 302, '', { Location: canonicalUrl(req, url.pathname + url.search), 'Cache-Control': 'no-store' });
     }
     // other websites may not embed our code, styles, logos or share cards
     if (config.HOTLINK_GUARD && (p.startsWith('/assets/') || p.startsWith('/img/') || p.startsWith('/og/')) && fromOtherSite(req) && req.headers['sec-fetch-dest'] !== 'document') {
