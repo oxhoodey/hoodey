@@ -91,11 +91,13 @@ export const VARIABLES = [
   { group: 'Alerts', name: 'OPENING_BELL_MINUTES_BEFORE', type: 'int', default: 30, public: true, desc: 'Minutes before the open to post the brief.' },
 
   // ── Links ────────────────────────────────────────────────────────────
-  { group: 'Links', name: 'LINK_X', type: 'string', default: '', public: true, desc: 'X (Twitter) profile URL.' },
+  { group: 'Links', name: 'LINK_X', type: 'string', default: 'https://x.com/oxhoodey', public: true, desc: 'Official X profile URL. Shown in the official bar under the header and in the footer.' },
   { group: 'Links', name: 'LINK_TELEGRAM', type: 'string', default: '', public: true, desc: 'Telegram community URL.' },
   { group: 'Links', name: 'LINK_DOCS', type: 'string', default: '', public: true, desc: 'Docs URL.' },
   { group: 'Links', name: 'ROADMAP_VOTE_URL', type: 'string', default: '', public: true, desc: 'Where the "Vote on the roadmap" button goes. Hidden when empty.' },
-  { group: 'Links', name: 'TOKEN_CONTRACT_ADDRESS', type: 'string', default: '', public: true, desc: '$HOODEY contract address, shown in the footer when set.' },
+  { group: 'Links', name: 'TOKEN_CONTRACT_ADDRESS', type: 'string', default: '', public: true, desc: 'Official token contract address. While empty, the official bar shows TOKEN_CA_PLACEHOLDER instead.' },
+  { group: 'Links', name: 'TOKEN_CA_PLACEHOLDER', type: 'string', default: 'Soon', public: true, desc: 'Text shown as the CA until TOKEN_CONTRACT_ADDRESS is set.' },
+  { group: 'Links', name: 'OFFICIAL_BAR', type: 'bool', default: true, public: true, desc: 'Show the official bar (X account and CA) under the header on every page.' },
   { group: 'Links', name: 'TOKEN_BUY_URL', type: 'string', default: '', public: true, desc: 'Link to buy $HOODEY, shown in the footer when set.' },
 
   // ── Theme ────────────────────────────────────────────────────────────

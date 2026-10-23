@@ -165,9 +165,32 @@ export async function initPage(current) {
       ${alerts}
     </div>`;
 
+  // Official bar: our X account and the token CA (or "Soon"), so visitors can check them against fakes.
+  if (cfg.OFFICIAL_BAR && header && !document.querySelector('.official')) {
+    const xUrl = /^https:\/\/(x|twitter)\.com\/[A-Za-z0-9_]{1,15}\/?$/.test(cfg.LINK_X || '') ? cfg.LINK_X : '';
+    const handle = xUrl ? '@' + xUrl.replace(/\/$/, '').split('/').pop() : '';
+    const ca = String(cfg.TOKEN_CONTRACT_ADDRESS || '').trim();
+    const live = isAddress(ca);
+    const pons = live ? ponsUrl(cfg, ca) : '';
+    const bar = document.createElement('div');
+    bar.className = 'official';
+    bar.innerHTML = `<span class="of-k"><i></i>Official</span>
+      ${xUrl ? `<a class="of-x" href="${esc(xUrl)}" target="_blank" rel="noopener"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17.8 3h3.1l-6.8 7.7L22 21h-6.2l-4.9-6.3L5.3 21H2.2l7.3-8.3L2 3h6.4l4.4 5.8L17.8 3Zm-1.1 16.2h1.7L7.4 4.7H5.6l11.1 14.5Z"/></svg>${esc(handle)}</a>` : ''}
+      <span class="of-ca${live ? ' live' : ''}"><b>CA</b>${live
+        ? `<code title="${esc(ca)}">${esc(ca.slice(0, 8))}…${esc(ca.slice(-6))}</code><button type="button" class="of-copy" aria-label="Copy contract address">Copy</button>${pons ? `<a href="${esc(pons)}" target="_blank" rel="noopener">Pons ↗</a>` : ''}`
+        : `<em>${esc(cfg.TOKEN_CA_PLACEHOLDER || 'Soon')}</em>`}</span>
+      <span class="of-warn">${live ? 'Only trust this CA. Anything else is fake.' : `The CA will only be posted here${handle ? ' and on ' + esc(handle) : ''}. Anything else is fake.`}</span>`;
+    header.insertAdjacentElement('afterend', bar);
+    const cp = bar.querySelector('.of-copy');
+    if (cp) cp.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(ca); cp.textContent = 'Copied'; } catch { prompt('Copy the contract address', ca); }
+      setTimeout(() => { cp.textContent = 'Copy'; }, 1600);
+    });
+  }
+
   const foot = document.querySelector('footer.foot');
   if (foot) {
-    const links = [['X', cfg.LINK_X], ['Telegram', cfg.LINK_TELEGRAM], ['Docs', cfg.LINK_DOCS], ['Buy $HOODEY', cfg.TOKEN_BUY_URL]]
+    const links = [['X', cfg.LINK_X], ['Telegram', cfg.LINK_TELEGRAM], ['Docs', cfg.LINK_DOCS], ['Buy on Pons', cfg.TOKEN_BUY_URL]]
       .filter(([, u]) => u).map(([t, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)}</a>`).join('');
     const ca = cfg.TOKEN_CONTRACT_ADDRESS ? `<span>CA <code>${esc(cfg.TOKEN_CONTRACT_ADDRESS)}</code></span>` : '';
     foot.innerHTML = `<span>${esc(cfg.APP_NAME)} reads public on-chain data. Read-only, never asks for a signature. Not financial advice.${cfg.DATA_MODE === 'sample' ? ' Currently showing sample data.' : ''}</span>${ca}<nav aria-label="Links">${links}</nav>`;

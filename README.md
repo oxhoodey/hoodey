@@ -150,11 +150,13 @@ Generated from `server/config.js` by `npm run env:example`. 🔒 = secret, never
 | `OPENING_BELL_BRIEF_ENABLED` | `false` | Post a brief to Telegram before the regular session opens. |
 | `OPENING_BELL_MINUTES_BEFORE` | `30` | Minutes before the open to post the brief. |
 | **Links** | | |
-| `LINK_X` | _empty_ | X (Twitter) profile URL. |
+| `LINK_X` | `https://x.com/oxhoodey` | Official X profile URL. Shown in the official bar under the header and in the footer. |
 | `LINK_TELEGRAM` | _empty_ | Telegram community URL. |
 | `LINK_DOCS` | _empty_ | Docs URL. |
 | `ROADMAP_VOTE_URL` | _empty_ | Where the "Vote on the roadmap" button goes. Hidden when empty. |
-| `TOKEN_CONTRACT_ADDRESS` | _empty_ | $HOODEY contract address, shown in the footer when set. |
+| `TOKEN_CONTRACT_ADDRESS` | _empty_ | Official token contract address. While empty, the official bar shows TOKEN_CA_PLACEHOLDER instead. |
+| `TOKEN_CA_PLACEHOLDER` | `Soon` | Text shown as the CA until TOKEN_CONTRACT_ADDRESS is set. |
+| `OFFICIAL_BAR` | `true` | Show the official bar (X account and CA) under the header on every page. |
 | `TOKEN_BUY_URL` | _empty_ | Link to buy $HOODEY, shown in the footer when set. |
 | **Theme** | | |
 | `THEME_ACCENT` | `#00C805` | Main accent color (buttons, gauges, bars). |
