@@ -167,7 +167,19 @@ export async function radar(rangeHours) {
   };
   const model = insightModel();
   const withDeath = (l) => { const r = tokenRow(l, all, creatorCounts, null, vol); const f = forecast(model, l.address); if (f) r.death = { status: f.status, medianLifeMin: f.medianLifeMin, expectedDeathAt: f.expectedDeathAt, diedPct: f.diedPct }; r.larp = quickFlag(l, larpIndex()); return r; };
-  return { source: 'live', moves, events: moves.filter((m) => m.spike), latest: all.slice(0, 16).map(withDeath),
+  // Life expectancy from the chain: how long launches in the window lived (dead = -90% from peak or an hour without trades)
+  const lifeOf = () => {
+    const done = [...model.tokens.values()].filter((x) => now - x.launch.t > 10 * 60e3);
+    if (done.length < 5) return null;
+    const lives = done.filter((x) => x.life.dead && x.lifeMin != null).map((x) => x.lifeMin).sort((p, q) => p - q);
+    const alive = done.length - lives.length;
+    const pct = (n) => Math.round((n / done.length) * 100);
+    const n = (a, b) => lives.filter((m) => m >= a && m < b).length;
+    return { source: 'live', medianMin: lives.length ? lives[Math.floor(lives.length / 2)] : null, sample: done.length,
+      buckets: [{ label: '< 10m', pct: pct(n(0, 10)) }, { label: '10–60m', pct: pct(n(10, 60)) }, { label: '1h+', pct: pct(n(60, Infinity)) }, { label: 'Still alive', pct: pct(alive) }] };
+  };
+  const life = lifeOf();
+  return { source: 'live', life: life || undefined, moves, events: moves.filter((m) => m.spike), latest: all.slice(0, 16).map(withDeath),
     timeline: all.filter((l) => l.t >= now - 3600e3).slice(0, 400).map((l) => ({ address: l.address, symbol: l.symbol, at: l.at, risk: tokenRow(l, all, creatorCounts, null, null).risk })),
     stats, hot: { source: 'live', items: hot }, errors };
 }
