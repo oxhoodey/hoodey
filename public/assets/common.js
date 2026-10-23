@@ -179,3 +179,40 @@ export async function initPage(current) {
   }
   return cfg;
 }
+
+// ── Follow gate ───────────────────────────────────────────────────────
+// After FOLLOW_GATE_FREE_SCANS manual scans, ask the visitor to follow our X account.
+// X doesn't let a website check who follows whom without a paid API, so this works on trust:
+// the "I've followed" button unlocks scans on this browser.
+const GATE_KEY = 'hoodey.followed', COUNT_KEY = 'hoodey.scans';
+const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch { /* ignore */ } } };
+export function followGate(cfg) {
+  const handle = String(cfg.FOLLOW_GATE_HANDLE || '').replace(/^@/, '').trim();
+  if (!cfg.FOLLOW_GATE || !/^[A-Za-z0-9_]{1,15}$/.test(handle) || store.get(GATE_KEY) === '1') return Promise.resolve(true);
+  const used = parseInt(store.get(COUNT_KEY) || '0', 10) || 0;
+  if (used < (cfg.FOLLOW_GATE_FREE_SCANS ?? 1)) { store.set(COUNT_KEY, String(used + 1)); return Promise.resolve(true); }
+  return new Promise((resolve) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'fg-wrap';
+    wrap.innerHTML = `<div class="fg" role="dialog" aria-modal="true" aria-labelledby="fg-t">
+      <button type="button" class="fg-x" aria-label="Close">×</button>
+      <span class="fg-mark">${LOGO}</span>
+      <span class="eyebrow">Free, one step</span>
+      <h2 id="fg-t">Follow <b>@${esc(handle)}</b> to keep scanning</h2>
+      <p>Scans stay free. Follow us on X for live cabal reports, LARP alerts and new launches, then come back and tap <b>I've followed</b>.</p>
+      <a class="btn btn-primary fg-follow" href="https://x.com/intent/follow?screen_name=${encodeURIComponent(handle)}" target="_blank" rel="noopener"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17.8 3h3.1l-6.8 7.7L22 21h-6.2l-4.9-6.3L5.3 21H2.2l7.3-8.3L2 3h6.4l4.4 5.8L17.8 3Zm-1.1 16.2h1.7L7.4 4.7H5.6l11.1 14.5Z"/></svg>Follow @${esc(handle)}</a>
+      <button type="button" class="btn fg-done" disabled>I've followed</button>
+      <small class="muted">Read-only. We never ask you to connect a wallet or sign.</small>
+    </div>`;
+    document.body.appendChild(wrap);
+    const done = wrap.querySelector('.fg-done');
+    const close = (ok) => { wrap.remove(); document.removeEventListener('keydown', onKey); resolve(ok); };
+    const onKey = (e) => { if (e.key === 'Escape') close(false); };
+    document.addEventListener('keydown', onKey);
+    wrap.addEventListener('click', (e) => { if (e.target === wrap) close(false); });
+    wrap.querySelector('.fg-x').addEventListener('click', () => close(false));
+    wrap.querySelector('.fg-follow').addEventListener('click', () => { setTimeout(() => { done.disabled = false; done.classList.add('btn-primary'); }, 2500); });
+    done.addEventListener('click', () => { store.set(GATE_KEY, '1'); close(true); });
+    wrap.querySelector('.fg-follow').focus();
+  });
+}

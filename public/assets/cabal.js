@@ -1,5 +1,5 @@
 import { agentScan, scanLabel } from './agent.js';
-import { initPage, api, html, raw, esc, timeAgo, sourceBadge, isAddress, explorerLink, ponsLink, avatar, every } from './common.js';
+import { followGate, initPage, api, html, raw, esc, timeAgo, sourceBadge, isAddress, explorerLink, ponsLink, avatar, every } from './common.js';
 
 const cfg = await initPage('cabal');
 const $ = (id) => document.getElementById(id);
@@ -156,15 +156,17 @@ async function run(address) {
   }
 }
 
-$('scan-form').addEventListener('submit', (ev) => {
+$('scan-form').addEventListener('submit', async (ev) => {
   ev.preventDefault();
   const a = $('ca').value.trim();
   $('scan-error').textContent = '';
   if (!isAddress(a)) { $('scan-error').textContent = 'Paste a contract address: 0x followed by 40 characters.'; return; }
+  if (!(await followGate(cfg))) return;
   history.replaceState(null, '', `?address=${a}`);
   run(a);
 });
 $('hot-btn').addEventListener('click', async () => {
+  if (!(await followGate(cfg))) return;
   try {
     const t = await api('/api/trending');
     // the hottest token we can actually scan: launched inside the window, with real buyers

@@ -1,4 +1,4 @@
-import { initPage, api, html, raw, esc, timeAgo, sourceBadge, isAddress, explorerLink, ponsLink, avatar, every } from './common.js';
+import { followGate, initPage, api, html, raw, esc, timeAgo, sourceBadge, isAddress, explorerLink, ponsLink, avatar, every } from './common.js';
 import { agentScan, scanLabel } from './agent.js';
 import { createParticleText } from './particletext.js';
 import { deathText } from './launchtape.js';
@@ -215,7 +215,8 @@ async function run(address) {
   }
 }
 
-function go(a) {
+async function go(a) {
+  if (!(await followGate(cfg))) return;
   $('xa').value = a;
   history.replaceState(null, '', `?address=${a}`);
   run(a);

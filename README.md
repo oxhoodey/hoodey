@@ -161,6 +161,10 @@ Generated from `server/config.js` by `npm run env:example`. 🔒 = secret, never
 | `THEME_ACCENT_INK` | `#078A33` | Darker accent used for text and chart lines on white. |
 | `THEME_BG` | `#F7FAF8` | Page background. |
 | `BG_ANIMATION_ENABLED` | `true` | Animated 3D dot field behind the pages. |
+| **Follow gate** | | |
+| `FOLLOW_GATE` | `true` | Ask visitors to follow the X account before they can run more scans. Links shared on X still open their scan without asking. |
+| `FOLLOW_GATE_HANDLE` | `oxhoodey` | X username to follow (no @). |
+| `FOLLOW_GATE_FREE_SCANS` | `1` | Scans a visitor can run before the follow prompt appears. |
 | **Features** | | |
 | `FEATURE_RADAR` | `true` | Show Stock → Meme Radar. |
 | `FEATURE_COPYCAT` | `true` | Show Copycat Eye. |

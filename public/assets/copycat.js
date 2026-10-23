@@ -1,5 +1,5 @@
 import { agentScan, scanLabel } from './agent.js';
-import { initPage, api, html, raw, esc, fmtDuration, timeAgo, short, sourceBadge, isAddress, explorerLink, ponsLink, tokenImg } from './common.js';
+import { followGate, initPage, api, html, raw, esc, fmtDuration, timeAgo, short, sourceBadge, isAddress, explorerLink, ponsLink, tokenImg } from './common.js';
 
 const cfg = await initPage('copycat');
 const $ = (id) => document.getElementById(id);
@@ -128,15 +128,17 @@ async function run(path, mode) {
   }
 }
 
-$('scan-form').addEventListener('submit', (ev) => {
+$('scan-form').addEventListener('submit', async (ev) => {
   ev.preventDefault();
   const a = $('ca').value.trim();
   $('scan-error').textContent = '';
   if (!isAddress(a)) { $('scan-error').textContent = 'Paste a contract address: 0x followed by 40 characters.'; return; }
+  if (!(await followGate(cfg))) return;
   history.replaceState(null, '', `?address=${a}`);
   run(`/api/copycat/scan?address=${encodeURIComponent(a)}`, 'scan');
 });
-$('latest-btn').addEventListener('click', () => {
+$('latest-btn').addEventListener('click', async () => {
+  if (!(await followGate(cfg))) return;
   $('ca').value = '';
   history.replaceState(null, '', location.pathname);
   run('/api/copycat/latest', 'latest');

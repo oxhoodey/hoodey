@@ -1,5 +1,5 @@
 import { agentScan, scanLabel } from './agent.js';
-import { initPage, api, html, raw, esc, timeAgo, sourceBadge, isAddress, explorerLink, ponsLink, avatar, every } from './common.js';
+import { followGate, initPage, api, html, raw, esc, timeAgo, sourceBadge, isAddress, explorerLink, ponsLink, avatar, every } from './common.js';
 
 const cfg = await initPage('larp');
 const $ = (id) => document.getElementById(id);
@@ -103,7 +103,8 @@ async function run(address) {
     job.attach();
   } catch (err) { $('result').innerHTML = html`<div class="empty">${err.message}</div>`; }
 }
-function go(a) {
+async function go(a) {
+  if (!(await followGate(cfg))) return;
   $('la').value = a;
   history.replaceState(null, '', `?address=${a}`);
   run(a);

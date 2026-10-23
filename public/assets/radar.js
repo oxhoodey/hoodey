@@ -1,4 +1,4 @@
-import { initPage, api, html, raw, esc, fmtInt, fmtUsd, fmtPct, fmtDuration, timeAgo, sourceBadge, every, isAddress, explorerLink, ponsLink, avatar } from './common.js';
+import { followGate, initPage, api, html, raw, esc, fmtInt, fmtUsd, fmtPct, fmtDuration, timeAgo, sourceBadge, every, isAddress, explorerLink, ponsLink, avatar } from './common.js';
 import { createParticleMark } from './particlemark.js';
 import { createHotField, fmtPrice, METRICS } from './hotfield.js';
 import { createLaunchTape } from './launchtape.js';
@@ -348,6 +348,7 @@ if (cfg.features.walletWatch) {
     const addr = $('wallet-addr').value.trim();
     $('wallet-error').textContent = '';
     if (!isAddress(addr)) { $('wallet-error').textContent = 'That doesn’t look like an address. It should be 0x followed by 40 characters.'; return; }
+    if (!(await followGate(cfg))) return;
     const btn = ev.target.querySelector('button');
     btn.disabled = true;
     $('wallet-out').innerHTML = '<div class="small" style="color: #CFE3D4">Looking up…</div>';

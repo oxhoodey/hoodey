@@ -105,6 +105,9 @@ export const VARIABLES = [
   { group: 'Theme', name: 'BG_ANIMATION_ENABLED', type: 'bool', default: true, public: true, desc: 'Animated 3D dot field behind the pages.' },
 
   // ── Features ─────────────────────────────────────────────────────────
+  { group: 'Follow gate', name: 'FOLLOW_GATE', type: 'bool', default: true, public: true, desc: 'Ask visitors to follow the X account before they can run more scans. Links shared on X still open their scan without asking.' },
+  { group: 'Follow gate', name: 'FOLLOW_GATE_HANDLE', type: 'string', default: 'oxhoodey', public: true, desc: 'X username to follow (no @).' },
+  { group: 'Follow gate', name: 'FOLLOW_GATE_FREE_SCANS', type: 'int', default: 1, public: true, desc: 'Scans a visitor can run before the follow prompt appears.' },
   { group: 'Features', name: 'FEATURE_RADAR', type: 'bool', default: true, public: true, desc: 'Show Stock → Meme Radar.' },
   { group: 'Features', name: 'FEATURE_COPYCAT', type: 'bool', default: true, public: true, desc: 'Show Copycat Eye.' },
   { group: 'Features', name: 'FEATURE_CABAL', type: 'bool', default: true, public: true, desc: 'Show Cabal Eye (Cabal Scan and Cabal Map).' },
