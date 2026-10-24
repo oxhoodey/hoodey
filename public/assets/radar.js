@@ -294,7 +294,7 @@ $('hot-view').addEventListener('click', (e) => { const b = e.target.closest('but
 
 async function loadHot() {
   try { hot.data = await api('/api/trending'); renderHot(); }
-  catch (err) { $('hot-rows').innerHTML = html`<div class="empty">Couldn't load the board: ${err.message}</div>`; $('hot-focus').innerHTML = html`<div class="empty">Couldn't load the board: ${err.message}</div>`; }
+  catch (err) { $('hot-field').innerHTML = ''; $('hot-rows').innerHTML = html`<div class="empty">Couldn't load the board: ${err.message}</div>`; $('hot-focus').innerHTML = html`<div class="empty">Couldn't load the board: ${err.message}</div>`; }
 }
 // Rows open Copycat Eye; the Pons button inside opens ponsfamily.com instead.
 for (const id of ['hot-rows']) {

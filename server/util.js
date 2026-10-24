@@ -106,20 +106,34 @@ export async function fetchJson(url, opts = {}) {
   }
 }
 
+// Short cache with stale-while-revalidate: once a key has a value, callers never wait for a refresh.
+// An expired value is returned at once (up to STALE_MAX) while a fresh one is built in the background.
+const STALE_MAX = 10 * 60e3;
 export function createCache(ttlSeconds) {
   const store = new Map();
+  const refresh = (key, fn, hit) => {
+    const pending = fn().then((value) => {
+      store.set(key, { value, has: true, exp: Date.now() + ttlSeconds * 1000 });
+      if (store.size > 500) store.delete(store.keys().next().value);
+      return value;
+    }).catch((e) => {
+      if (hit && hit.has) { store.set(key, { ...hit, pending: null }); }
+      else store.delete(key);
+      throw e;
+    });
+    store.set(key, { ...(hit || {}), pending });
+    return pending;
+  };
   return async function cached(key, fn) {
     const hit = store.get(key);
     const now = Date.now();
-    if (hit && hit.exp > now) return hit.value;
+    if (hit && hit.has && hit.exp > now) return hit.value;
+    if (hit && hit.has && now - hit.exp < STALE_MAX) {
+      if (!hit.pending) refresh(key, fn, hit).catch(() => {});
+      return hit.value;
+    }
     if (hit && hit.pending) return hit.pending;
-    const pending = fn().then((value) => {
-      store.set(key, { value, exp: Date.now() + ttlSeconds * 1000 });
-      if (store.size > 500) store.delete(store.keys().next().value);
-      return value;
-    }).catch((e) => { store.delete(key); throw e; });
-    store.set(key, { ...(hit || {}), pending, exp: 0 });
-    return pending;
+    return refresh(key, fn, hit);
   };
 }
 

@@ -1092,3 +1092,13 @@ a.lp-link:hover { box-shadow: inset 0 0 0 1.5px var(--accent); }
 .of-ca.live { box-shadow: inset 0 0 0 1.5px var(--accent); }
 .of-warn { margin-left: auto; font-size: 12.5px; color: var(--muted); }
 @media (max-width: 760px) { .official { margin-top: 10px; } .of-warn { margin-left: 0; flex-basis: 100%; } }
+
+/* page loading bar + live-section loading states */
+.loadbar{position:fixed;left:0;right:0;top:0;height:3px;z-index:1000;pointer-events:none;opacity:0;transition:opacity .3s}
+.loadbar.on{opacity:1}
+.loadbar.done{opacity:0;transition:opacity .35s .15s}
+.loadbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#00C805,#4FD853);box-shadow:0 0 10px rgba(0,200,5,.7),0 0 4px rgba(0,200,5,.9);border-radius:0 2px 2px 0;transition:width .2s ease-out}
+.loading-note{display:flex;align-items:center;justify-content:center;gap:10px;padding:28px 16px;font-family:var(--mono, 'DejaVu Sans Mono', monospace);font-size:13px;letter-spacing:.08em;color:var(--muted, #5B6E61)}
+.loading-note::before{content:'';width:9px;height:9px;border-radius:50%;background:#00C805;animation:ldpulse 1s ease-in-out infinite}
+@keyframes ldpulse{0%,100%{opacity:.25;transform:scale(.8)}50%{opacity:1;transform:scale(1.15)}}
+@media (prefers-reduced-motion: reduce){.loading-note::before{animation:none}}

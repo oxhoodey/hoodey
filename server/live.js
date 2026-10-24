@@ -117,9 +117,11 @@ export async function radar(rangeHours) {
   const watched = config.stocks.filter((s) => s.address);
   const moves = [];
   const errors = [];
-  for (const s of watched) {
+  const summaries = await Promise.all(watched.map((s) => tokenSummary(s.address).then((t) => ({ t }), (e) => ({ e }))));
+  for (const [k, s] of watched.entries()) {
     try {
-      const t = await tokenSummary(s.address);
+      if (summaries[k].e) throw summaries[k].e;
+      const t = summaries[k].t;
       const w = t[`${rangeHours}h`] || {};
       const price = Number(t.price_usd);
       const movePct = Number(w.last_price_usd_change) || 0;

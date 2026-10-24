@@ -64,12 +64,37 @@ export const isAddress = (s) => /^0x[0-9a-fA-F]{40}$/.test(String(s || '').trim(
 let cfgPromise;
 const metaOf = (n) => { const m = typeof document !== 'undefined' && document.querySelector(`meta[name="${n}"]`); return m ? m.content : ''; };
 export function getConfig() {
-  if (!cfgPromise) cfgPromise = api('/api/config');
+  if (!cfgPromise) {
+    // the server embeds the settings in the page, so no extra round trip is needed before drawing it
+    let inline = null;
+    try { const el = typeof document !== 'undefined' && document.getElementById('hoodey-cfg'); if (el) inline = JSON.parse(el.textContent); } catch { inline = null; }
+    cfgPromise = inline ? Promise.resolve(inline) : api('/api/config');
+  }
   return cfgPromise;
 }
 
 // Pages carry a signed key from the server; the API answers only requests that send it back.
+// Thin progress bar at the top of the page while any data request is in flight.
+let inflight = 0, barEl = null, barTimer = 0, barP = 0;
+function loadBar(delta) {
+  if (typeof document === 'undefined') return;
+  inflight = Math.max(0, inflight + delta);
+  if (!barEl) { barEl = document.createElement('div'); barEl.className = 'loadbar'; barEl.setAttribute('aria-hidden', 'true'); barEl.innerHTML = '<i></i>'; document.body.appendChild(barEl); }
+  clearInterval(barTimer);
+  if (inflight > 0) {
+    barEl.classList.add('on'); barEl.classList.remove('done');
+    if (barP >= 100) barP = 0;
+    barTimer = setInterval(() => { barP += (92 - barP) * 0.06; barEl.firstChild.style.width = barP + '%'; }, 120);
+  } else {
+    barP = 100; barEl.firstChild.style.width = '100%'; barEl.classList.add('done');
+    setTimeout(() => { if (!inflight) { barEl.classList.remove('on', 'done'); barEl.firstChild.style.width = '0%'; barP = 0; } }, 450);
+  }
+}
 export async function api(path) {
+  loadBar(1);
+  try { return await apiRaw(path); } finally { loadBar(-1); }
+}
+async function apiRaw(path) {
   const r = await fetch(path, { headers: { Accept: 'application/json', 'X-Hoodey-K': metaOf('hoodey-k') } });
   if (r.status === 401) {
     // key expired (page open for days, or the server's secret changed): reload once for a fresh one

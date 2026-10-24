@@ -54,7 +54,7 @@
   </div>
 </section>
 
-<div class="ticker" aria-label="Latest launches"><div class="ticker-track" id="ticker"></div></div>
+<div class="ticker" aria-label="Latest launches"><div class="ticker-track" id="ticker"><span class="loading-note" style="padding:6px 16px">Loading live launches…</span></div></div>
 
 <section class="panel hotx" id="hot-board" aria-label="Hot right now">
   <div class="panel-head" style="align-items: flex-end">
@@ -91,7 +91,7 @@
     </div>
   </div>
   <div class="hotx-stage" id="hot-field-wrap">
-    <div class="hotx-field" id="hot-field" aria-label="Hot tokens as a heat map. Bigger tiles have more volume; colour shows the price move."></div>
+    <div class="hotx-field" id="hot-field" aria-label="Hot tokens as a heat map. Bigger tiles have more volume; colour shows the price move."><div class="skel" style="min-height: 320px"></div></div>
     <aside class="hotx-focus" id="hot-focus" aria-live="polite"><div class="skel" style="min-height: 320px"></div></aside>
   </div>
   <div class="hotx-legend" aria-label="How to read the heat map">
@@ -164,7 +164,7 @@
     <div class="lx-count"><span class="live-dot" aria-hidden="true"></span><b id="lx-count">0</b><span>launches<br>last 60 min</span></div>
   </div>
   <div class="tape" id="launch-tape" aria-label="Launches over the last 60 minutes"></div>
-  <div class="lgrid" id="feed-rows" aria-label="Newest launches"></div>
+  <div class="lgrid" id="feed-rows" aria-label="Newest launches"><div class="loading-note" style="grid-column:1 / -1">Reading the newest Pons launches…</div></div>
 </section>
 
 </main>

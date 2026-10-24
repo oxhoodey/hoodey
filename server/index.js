@@ -102,7 +102,7 @@ async function renderPage(req, res, file, pathname, url) {
     .replaceAll('{{CANONICAL}}', escHtml(base + pathname))
     .replaceAll('{{OG_IMAGE}}', escHtml(ogImage))
     .replace('{{THEME_STYLE}}', themeStyle())
-    .replace('</head>', `<meta name="hoodey-k" content="${pageKey(req)}">${config.COPY_LOCK ? `<meta name="hoodey-h" content="${lockMeta(req)}">` : ''}\n</head>`);
+    .replace('</head>', `<script type="application/json" id="hoodey-cfg">${JSON.stringify(publicConfig()).replace(/</g, '\\u003c')}</script><meta name="hoodey-k" content="${pageKey(req)}">${config.COPY_LOCK ? `<meta name="hoodey-h" content="${lockMeta(req)}">` : ''}\n</head>`);
   send(res, 200, html, { 'Content-Type': MIME['.html'], 'Cache-Control': 'no-cache' });
 }
 

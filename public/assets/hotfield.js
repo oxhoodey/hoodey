@@ -132,6 +132,7 @@ export function createHotField({ stage, focus, cfg, onOpen }) {
   }
 
   function paint() {
+    stage.querySelectorAll(':scope > .skel').forEach((e) => e.remove());
     const W = stage.clientWidth, H = stage.clientHeight;
     if (!W || !H) return;
     lastSize = `${W}x${H}`;
@@ -206,7 +207,7 @@ export function createHotField({ stage, focus, cfg, onOpen }) {
     update(newRows, newMetric) {
       rows = newRows;
       metric = newMetric;
-      stage.querySelectorAll('.empty').forEach((e) => e.remove());
+      stage.querySelectorAll('.empty, :scope > .skel').forEach((e) => e.remove());
       if (!rows.length) {
         for (const [, el] of orbs) el.remove();
         orbs.clear();

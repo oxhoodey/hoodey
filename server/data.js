@@ -6,7 +6,17 @@ import * as chain from './live.js';
 import * as bq from './live-bitquery.js';
 
 const live = config.DATA_SOURCE === 'bitquery' ? bq : chain;
-export const startLive = () => live.startWarmer();
+export const startLive = () => {
+  live.startWarmer();
+  if (!useLive()) return;
+  // Keep the home page's answers built in the background so the first visitor never waits for them.
+  const warm = () => {
+    radar(config.SPIKE_LOOKBACK_HOURS).catch(() => {});
+    trending().catch(() => {});
+  };
+  setTimeout(warm, 5000).unref?.();
+  setInterval(warm, Math.max(10, config.CACHE_TTL_SECONDS - 5) * 1000).unref?.();
+};
 
 const cached = createCache(config.CACHE_TTL_SECONDS);
 const useLive = () => config.DATA_MODE === 'live';
